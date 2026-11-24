@@ -101,8 +101,9 @@ pre.ai{white-space:pre-wrap;font:inherit;margin:8px 0 0}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='1.5',APP_DATE='24 nov 2026';
+var APP_VERSION='1.6',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['1.6','Importazione con un solo tocco da link'],
  ['1.5','Valore nominale come base per le tasse e importazione che aggiunge posizioni'],
  ['1.4','Aggiornamenti più rapidi e pulsante "Aggiorna app" nella sezione Dati'],
  ['1.3','Versione visibile in alto a sinistra e storico delle versioni'],
@@ -406,12 +407,25 @@ function doDownload(){
 }
 function doFile(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(){document.getElementById('imp').value=String(r.result);doImport()};r.readAsText(f)}
 function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today()}}
+function addPositions(arr){
+  var n=0,sk=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.some(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)});if(dup){sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
+  if(n)save();return {n:n,sk:sk};
+}
 function doAdd(){
   var msg=document.getElementById('addMsg');
   try{var o=JSON.parse(document.getElementById('addTxt').value);var arr=Array.isArray(o)?o:(o&&Array.isArray(o.pos)?o.pos:null);if(!arr||!arr.length)throw 0;
-    var n=0,sk=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.some(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)});if(dup){sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
-    save();render();var m2=document.getElementById('addMsg');if(m2)m2.textContent='Aggiunte '+n+' posizioni'+(sk?' ('+sk+' già presenti, saltate)':'')+'.';
+    var r=addPositions(arr);render();var m2=document.getElementById('addMsg');if(m2)m2.textContent='Aggiunte '+r.n+' posizioni'+(r.sk?' ('+r.sk+' già presenti, saltate)':'')+'.';
   }catch(e){if(msg)msg.textContent='Testo non valido: incolla il codice completo, dall\'apertura [ alla chiusura ].'}
+}
+function toast(t){var d=document.createElement('div');d.textContent=t;d.setAttribute('role','status');d.style.cssText='position:fixed;left:14px;right:14px;top:calc(env(safe-area-inset-top) + 12px);z-index:30;background:#18233b;border:1px solid #d4a84f;color:#ece8dd;border-radius:14px;padding:12px 14px;font-size:14px;box-shadow:0 8px 24px #000a';document.body.appendChild(d);setTimeout(function(){d.remove()},6000)}
+function importFromHash(){
+  var m=/^#import=([A-Za-z0-9_\-]+)$/.exec(location.hash||'');if(!m)return;
+  try{var b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
+    var arr=JSON.parse(decodeURIComponent(escape(atob(b))));if(!Array.isArray(arr))throw 0;
+    var r=addPositions(arr);tab='pos';render();
+    toast(r.n?('Aggiunte '+r.n+' posizioni.'+(r.sk?' ('+r.sk+' già presenti)':'')):'Queste posizioni sono già presenti.');
+  }catch(e){toast('Link di importazione non valido.')}
+  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){location.hash=''}
 }
 function doImport(){
   var msg=document.getElementById('bkMsg');
@@ -461,7 +475,7 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();render();
+load();render();importFromHash();
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 </script>
