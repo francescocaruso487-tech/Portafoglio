@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='1.9',APP_DATE='24 nov 2026';
+var APP_VERSION='2.0',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.0','Tetto del tasso alto (es. Revolut 3.000 \u20ac): rendimento calcolato a livelli e avviso per spostare il sovrappi\u00f9 su Trade Republic'],
  ['1.9','Sezioni a tendina per piattaforma e prezzi delle cripto aggiornati in automatico (quantit\u00e0 \u00d7 prezzo del giorno)'],
  ['1.8','Piani di accumulo automatici ogni mese, scheda Dettagli per ogni posizione e prossimi addebiti'],
  ['1.7','Spese: stipendio con il suo giro, uscite fisse, spese giornaliere, cashback e promemoria'],
@@ -144,9 +145,10 @@ function yearsTo(p){
   if(num(p.orizz)>0)return num(p.orizz);
   return null;
 }
+function tEff(p){var t=num(p.tasso),k=num(p.tetto),c=num(p.cap);if(k>0&&c>k&&p.tassoOltre!==''&&p.tassoOltre!=null)return (k*t+(c-k)*num(p.tassoOltre))/c;return t}
 function valueAt(p,Y){
   var T=yearsTo(p);var t=T==null?Y:Math.min(Y,T);
-  var r=(num(p.tasso)-num(p.costi))/100;if(r<-0.99)r=-0.99;
+  var r=(tEff(p)-num(p.costi))/100;if(r<-0.99)r=-0.99;
   var i=Math.pow(1+r,1/12)-1;var n=Math.round(t*12);
   var cap=num(p.cap),pm=num(p.pmt);
   var fv=cap*Math.pow(1+i,n);
@@ -229,8 +231,8 @@ function vQuadro0(){
   var byP={},byT={},byC={},byH={},cnt={},rt={};
   P.forEach(function(p){var c=num(p.cap);var t=TIPI[p.tipo]||TIPI.fermi;
     byP[p.piatt]=(byP[p.piatt]||0)+c;byT[t.n]=(byT[t.n]||0)+c;byC[t.cl]=(byC[t.cl]||0)+c;var bk=bucket(p);byH[bk]=(byH[bk]||0)+c;
-    cnt[p.piatt]=(cnt[p.piatt]||0)+1;rt[p.piatt]=(rt[p.piatt]||0)+c*num(p.tasso)});
-  var wr=tot?sum(P,function(p){return num(p.cap)*num(p.tasso)})/tot:0;
+    cnt[p.piatt]=(cnt[p.piatt]||0)+1;rt[p.piatt]=(rt[p.piatt]||0)+c*tEff(p)});
+  var wr=tot?sum(P,function(p){return num(p.cap)*tEff(p)})/tot:0;
   var y1=sum(P,function(p){return valueAt(p,1).netto}),y20=sum(P,function(p){return valueAt(p,20).netto});
   var d1=y1-tot;
   var h='<div class="hero"><div class="lab">Patrimonio censito</div><div class="tot">'+esc(new Intl.NumberFormat('it-IT',{maximumFractionDigits:0}).format(Math.round(tot)))+'<small>\u20ac</small></div>'+
@@ -260,7 +262,7 @@ function vPos(){
       var tp=TIPI[p.tipo]||TIPI.fermi;
       return '<div class="card pos" style="border-left:3px solid '+col(PCOL,p.piatt,0)+'" onclick="openForm(\''+esc(p.id)+'\')"><div class="row"><b>'+esc(p.nome)+'</b><b>'+eur(num(p.cap))+'</b></div>'+
        '<div class="mu">'+esc(tp.n)+' · tasso '+pc(num(p.tasso))+(num(p.pmt)?' · +'+eur(num(p.pmt))+'/mese':'')+'</div>'+
-       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(num(p.nom)>0?'<span class="tag">nominale '+esc(eur(num(p.nom)))+'</span>':'')+(num(p.pacGiorno)>=1&&num(p.pmt)>0?'<span class="tag">piano automatico il '+esc(p.pacGiorno)+' del mese</span>':'')+(num(p.qty)>0&&p.cg?'<span class="tag">'+esc(String(num(p.qty)))+' \u00d7 '+(p.px?esc(eur(p.px)):'prezzo da aggiornare')+'</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
+       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(num(p.nom)>0?'<span class="tag">nominale '+esc(eur(num(p.nom)))+'</span>':'')+(num(p.pacGiorno)>=1&&num(p.pmt)>0?'<span class="tag">piano automatico il '+esc(p.pacGiorno)+' del mese</span>':'')+(num(p.qty)>0&&p.cg?'<span class="tag">'+esc(String(num(p.qty)))+' \u00d7 '+(p.px?esc(eur(p.px)):'prezzo da aggiornare')+'</span>':'')+(num(p.tetto)>0?'<span class="tag">'+pc(num(p.tasso))+' fino a '+esc(eur(num(p.tetto)))+', poi '+esc(pc(num(p.tassoOltre)))+'</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
        (p.scad?'<span class="tag">scade '+esc(dt(p.scad))+'</span>':(num(p.orizz)?'<span class="tag">orizzonte '+esc(num(p.orizz))+' anni</span>':''))+'</div>'+
        '<div class="acts"><button class="mini" onclick="event.stopPropagation();fDett(\''+esc(p.id)+'\')">Dettagli</button><button class="mini" onclick="event.stopPropagation();fSaldo(\''+esc(p.id)+'\')">Aggiorna saldo</button><button class="mini" onclick="event.stopPropagation();fSposta(\''+esc(p.id)+'\')">Sposta soldi</button>'+(p.scad||p.bloccato?'<button class="mini" onclick="event.stopPropagation();fRinnova(\''+esc(p.id)+'\')">Rinnova blocco</button>':'')+'</div></div>'}).join(''));
   }).join('');
@@ -314,7 +316,9 @@ function consigli(){
   var old=P.filter(function(p){return p.agg&&(Date.now()-new Date(p.agg).getTime())/864e5>30});
   if(old.length)A.push({c:'',t:'Dati da aggiornare',x:old.length+' posizioni non vengono aggiornate da oltre 30 giorni: '+old.slice(0,4).map(function(p){return p.nome}).join(', ')+(old.length>4?'…':'')+'.'});
   var cp2=cashPos(),plans=sum(P,function(p){return p.piatt==='Trade Republic'?num(p.pmt):0});
-  if(cp2&&plans>0&&num(cp2.cap)<plans)A.push({c:'er',t:'Cash Trade Republic sotto i piani',x:'Il cash ('+eur(num(cp2.cap))+') è inferiore ai versamenti mensili dei piani ('+eur(plans)+'): se il saldo non basta il giorno dell\'addebito, qualche piano non parte. Ricarica prima di quella data.'});
+  if(cp2&&plans>0&&num(cp2.cap)<plans){var mq=plans-num(cp2.cap),srcT=P.filter(function(q){return q!==cp2&&num(q.tetto)>0&&num(q.cap)>0})[0];
+    A.push({c:'er',t:'Cash Trade Republic sotto i piani',x:'Il cash ('+eur(num(cp2.cap))+') è inferiore ai versamenti mensili dei piani ('+eur(plans)+'): se il saldo non basta il giorno dell\'addebito, qualche piano non parte.'+(srcT?' Mancano '+eur(mq)+': spostali dal tuo «'+srcT.nome+'» ('+eur(num(srcT.cap))+') prima di quella data.':' Ricarica prima di quella data.')})}
+  P.forEach(function(q){var k=num(q.tetto);if(k>0&&num(q.cap)>k){var tg=k-100,ex=num(q.cap)-tg;A.push({c:'er',t:'Oltre il tetto su '+q.piatt,x:'«'+q.nome+'» ha '+eur(num(q.cap))+': oltre '+eur(k)+' il tasso scende a '+pc(num(q.tassoOltre))+'. Sposta circa '+eur(ex)+' su Trade Republic (2,5% senza limite) per tornare a '+eur(tg)+'.'})}});
   if(S.fisse.length){var fm=fisseMese(),ibn=interessiMese();A.push({c:'in',t:'Uscite fisse e interessi',x:'Le uscite fisse valgono '+eur(fm)+' al mese ('+eur(fm*12)+' l\'anno). Gli interessi netti stimati sui tuoi soldi fermi o a tasso valgono circa '+eur(ibn)+' al mese'+(fm>0?', cioè il '+pc(ibn/fm*100)+' delle uscite fisse.':'.')})}
   if(!A.length)A.push({c:'ok',t:'Nessun avviso',x:'Con le soglie e i dati attuali non risultano problemi evidenti.'});
   return A;
@@ -363,7 +367,7 @@ function go(t){tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
 
 function openForm(id){
   var p=id?S.pos.filter(function(x){return x.id===id})[0]:null;
-  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false,pacGiorno:'',pacDa:'',qty:'',cg:''};
+  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false,pacGiorno:'',pacDa:'',qty:'',cg:'',tetto:'',tassoOltre:''};
   var opt=function(list,sel,lab){return list.map(function(k){var v=lab?k:k;return '<option value="'+esc(k)+'"'+(k===sel?' selected':'')+'>'+esc(lab?lab(k):k)+'</option>'}).join('')};
   var m=document.getElementById('modal');
   m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+(isNew?'Nuova posizione':'Modifica posizione')+'</h2>'+
@@ -376,6 +380,7 @@ function openForm(id){
   '<label>Versamento mensile (€, facoltativo)</label><input id="f_pmt" inputmode="decimal" value="'+esc(p.pmt)+'">'+
   '<div class="two"><div><label>Giorno del versamento (1-31)</label><input id="f_pg" inputmode="numeric" value="'+esc(p.pacGiorno==null?'':p.pacGiorno)+'"></div><div><label>Pagato da</label><select id="f_pd"><option value="">Nessuno (non scalare)</option><option value="cash"'+(p.pacDa==='cash'?' selected':'')+'>Cash Trade Republic</option>'+S.pos.filter(function(x){return x.id!==p.id}).map(function(x){return '<option value="'+esc(x.id)+'"'+(p.pacDa===x.id?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div></div>'+
   '<div class="two"><div><label>Quantit\u00e0 (monete, facoltativo)</label><input id="f_qty" inputmode="decimal" value="'+esc(p.qty==null?'':p.qty)+'"></div><div><label>Codice prezzo (es. bitcoin)</label><input id="f_cg" value="'+esc(p.cg||'')+'" autocapitalize="none"></div></div><div class="note">Con quantit\u00e0 e codice, il capitale si aggiorna da solo al prezzo del giorno (codici di CoinGecko: bitcoin, ethereum, crypto-com-chain...).</div>'+
+  '<div class="two"><div><label>Tetto del tasso alto (\u20ac)</label><input id="f_tt" inputmode="decimal" value="'+esc(p.tetto==null?'':p.tetto)+'"></div><div><label>Tasso oltre il tetto (%)</label><input id="f_to" inputmode="decimal" value="'+esc(p.tassoOltre==null?'':p.tassoOltre)+'"></div></div><div class="note">Solo per conti a livelli (es. Revolut: 3.000 \u20ac e 1%). Il rendimento si calcola a livelli e ti avviso quando superi il tetto.</div>'+
   '<div class="note">Con giorno e conto di pagamento, ogni mese l\'app aggiunge il versamento alla posizione e lo toglie dal conto, da sola.</div>'+
   '<div class="chk"><input type="checkbox" id="f_var"'+(p.variabile?' checked':'')+'><span>Tasso variabile</span></div>'+
   '<div class="chk"><input type="checkbox" id="f_blk"'+(p.bloccato?' checked':'')+'><span>Vincolato (non posso ritirarlo prima della scadenza)</span></div>'+
@@ -391,7 +396,7 @@ function saveForm(id,isNew){
   var g=function(k){return document.getElementById(k).value};
   var nome=g('f_nome').trim();if(!nome){document.getElementById('f_nome').focus();return}
   var o={id:id,nome:nome,piatt:g('f_piatt'),tipo:g('f_tipo'),cap:num(g('f_cap')),tasso:num(g('f_tasso')),tassa:num(g('f_tassa')),costi:num(g('f_costi')),
-   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||'',qty:g('f_qty')===''?'':num(g('f_qty')),cg:g('f_cg').trim().toLowerCase()};
+   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||'',qty:g('f_qty')===''?'':num(g('f_qty')),cg:g('f_cg').trim().toLowerCase(),tetto:g('f_tt')===''?'':num(g('f_tt')),tassoOltre:g('f_to')===''?'':num(g('f_to'))};
   if(isNew)S.pos.push(o);else S.pos=S.pos.map(function(x){return x.id===id?o:x});
   save();closeForm();render();
 }
@@ -420,9 +425,9 @@ function doDownload(){
   try{var b=new Blob([backupText()],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='portafoglio-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);msg.textContent='Backup scaricato.'}catch(e){msg.textContent='Download non riuscito: usa "Copia testo".'}
 }
 function doFile(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(){document.getElementById('imp').value=String(r.result);doImport()};r.readAsText(f)}
-function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today(),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':Math.min(31,Math.max(1,Math.round(num(p.pacGiorno)))),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||''),qty:(p.qty===''||p.qty==null)?'':num(p.qty),cg:String(p.cg||'')}}
+function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today(),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':Math.min(31,Math.max(1,Math.round(num(p.pacGiorno)))),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||''),qty:(p.qty===''||p.qty==null)?'':num(p.qty),cg:String(p.cg||''),tetto:(p.tetto===''||p.tetto==null)?'':num(p.tetto),tassoOltre:(p.tassoOltre===''||p.tassoOltre==null)?'':num(p.tassoOltre)}}
 function addPositions(arr){
-  var n=0,sk=0,up=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.filter(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)})[0];if(dup){if(c.cg&&(dup.cg!==c.cg||num(dup.qty)!==num(c.qty))){dup.cg=c.cg;dup.qty=c.qty;up++;return}if(c.pacGiorno!==''&&dup.pacGiorno!==c.pacGiorno){dup.pacGiorno=c.pacGiorno;dup.pacDa=c.pacDa;dup.pacUlt=dup.pacUlt||c.pacUlt;up++}else sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
+  var n=0,sk=0,up=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.filter(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)})[0];if(dup){if(c.tetto!==''&&(num(dup.tetto)!==num(c.tetto)||num(dup.tassoOltre)!==num(c.tassoOltre))){dup.tetto=c.tetto;dup.tassoOltre=c.tassoOltre;up++;return}if(c.cg&&(dup.cg!==c.cg||num(dup.qty)!==num(c.qty))){dup.cg=c.cg;dup.qty=c.qty;up++;return}if(c.pacGiorno!==''&&dup.pacGiorno!==c.pacGiorno){dup.pacGiorno=c.pacGiorno;dup.pacDa=c.pacDa;dup.pacUlt=dup.pacUlt||c.pacUlt;up++}else sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
   if(n||up)save();return {n:n,sk:sk,up:up};
 }
 function doAdd(){
@@ -446,7 +451,7 @@ function importFromHash(){
 function doImport(){
   var msg=document.getElementById('bkMsg');
   try{var o=JSON.parse(document.getElementById('imp').value);if(!o||!Array.isArray(o.pos))throw 0;
-    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||''),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':num(p.pacGiorno),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||'')}});
+    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||''),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':num(p.pacGiorno),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||''),qty:(p.qty===''||p.qty==null)?'':num(p.qty),cg:String(p.cg||''),tetto:(p.tetto===''||p.tetto==null)?'':num(p.tetto),tassoOltre:(p.tassoOltre===''||p.tassoOltre==null)?'':num(p.tassoOltre)}});
     o.set=o.set||{};o.set.target=o.set.target||{};o.set.maxPiatt=num(o.set.maxPiatt)||60;o.set.maxCripto=num(o.set.maxCripto)||15;o.set.minIdle=o.set.minIdle==null?500:num(o.set.minIdle);
     S=o;normalize();save();render();
   }catch(e){msg.textContent='Backup non valido.'}
@@ -488,7 +493,7 @@ function dsh(d){return new Date(d+'T12:00:00').toLocaleDateString('it-IT',{day:'
 function fmtInt(n){return new Intl.NumberFormat('it-IT',{maximumFractionDigits:0,useGrouping:'always'}).format(Math.round(n))}
 function r2(n){return Math.round(n*100)/100}
 function fisseMese(){return sum(S.fisse,function(f){return f.freq==='anno'?num(f.imp)/12:num(f.imp)})}
-function interessiMese(){return sum(S.pos,function(p){return ['buono','conto','obbl','staking'].indexOf(p.tipo)>=0?num(p.cap)*num(p.tasso)/100*(1-num(p.tassa)/100)/12:0})}
+function interessiMese(){return sum(S.pos,function(p){return ['buono','conto','obbl','staking'].indexOf(p.tipo)>=0?num(p.cap)*tEff(p)/100*(1-num(p.tassa)/100)/12:0})}
 function cashPos(){return S.pos.filter(function(p){return p.piatt==='Trade Republic'&&(p.tipo==='conto'||p.tipo==='fermi')})[0]||null}
 function intesaPos(){return S.pos.filter(function(p){return p.piatt==='Intesa Sanpaolo'})[0]||null}
 function stipMese(){var mo=ym(today());return S.mov.some(function(m){return m.t==='in'&&m.cat==='Stipendio'&&ym(m.d)===mo})}
@@ -687,7 +692,7 @@ function fDett(id){
       (g>=1?r('Giorno',g+' del mese')+r('Prossimo',dt(nextOcc(g))):'<div class="note">Imposta il giorno in Modifica per renderlo automatico.</div>')+
       r('Pagato da',src?esc(src.nome):'non scalato da nessun saldo')+'</div>';
   }
-  var net=cap*(num(p.tasso)-num(p.costi))/100*(1-num(p.tassa)/100)/12;
+  var net=cap*(tEff(p)-num(p.costi))/100*(1-num(p.tassa)/100)/12;
   h+='<div class="card"><h2>Rendimento ipotizzato</h2>'+r('Tasso lordo annuo',pc(num(p.tasso)))+(num(p.costi)?r('Costi annui',pc(num(p.costi))):'')+r('Tasse sul guadagno',pc(num(p.tassa)))+r('Crescita netta stimata al mese',eur2(net))+
     '<div class="note">'+(p.bloccato?'Vincolato fino alla scadenza. ':'')+(p.variabile?'Tasso variabile: può cambiare. ':'')+'Sono ipotesi tue, non garanzie.</div></div>';
   var T=yearsTo(p);
