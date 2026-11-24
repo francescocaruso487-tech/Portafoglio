@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.6',APP_DATE='24 nov 2026';
+var APP_VERSION='2.7',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.7','Tasto indietro: chiude la schermata aperta, poi torna alla scheda precedente, fino alla home'],
  ['2.6','Uscite fisse annuali con il loro mese: compaiono nei prossimi addebiti e scalano il saldo il giorno giusto'],
  ['2.5','Carburante: puoi segnare un rifornimento non completo, che non falsa consumi e autonomia'],
  ['2.4','Carburante: litri, importo e km a ogni pieno, con prezzo al litro, consumo e km per pieno'],
@@ -370,7 +371,14 @@ function render(){
   if(tab==='pos'||(tab==='quadro'&&S.pos.length))addFab('+ Aggiungi',function(){openForm()});else if(tab==='spese')addFab('+ Spesa',function(){fSpesa()});
 }
 function addFab(lab,fn){var b=document.createElement('button');b.id='fab';b.className='pri fab';b.textContent=lab;b.onclick=fn;document.body.appendChild(b)}
-function go(t){tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
+function hpush(s){try{history.pushState(s,'')}catch(e){}}
+function openModal(m){if(m.hidden)hpush({m:1,tab:tab});m.hidden=false}
+function go(t){if(t!==tab)hpush({tab:t});tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
+window.addEventListener('popstate',function(e){
+  var m=document.getElementById('modal'),s=e.state||{};
+  if(m&&!m.hidden){m.hidden=true;m.innerHTML=''}
+  var t=s.tab||'quadro';if(t!==tab){tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
+});
 
 function openForm(id){
   var p=id?S.pos.filter(function(x){return x.id===id})[0]:null;
@@ -393,12 +401,12 @@ function openForm(id){
   '<div class="chk"><input type="checkbox" id="f_blk"'+(p.bloccato?' checked':'')+'><span>Vincolato (non posso ritirarlo prima della scadenza)</span></div>'+
   '<div class="note">Per ETF e cripto il rendimento è un\'ipotesi tua (anche 0). Per i buoni usa il rendimento medio annuo che ti interessa.</div>'+
   '<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="saveForm(\''+esc(p.id)+'\','+(isNew?'true':'false')+')">Salva</button><button class="sec" onclick="closeForm()">Annulla</button>'+(isNew?'':'<button class="dan" onclick="delPos(\''+esc(p.id)+'\')">Elimina</button>')+'</p></div></div>';
-  m.hidden=false;
+  openModal(m);
 }
 function tipoChange(){var t=document.getElementById('f_tipo').value;var T=TIPI[t];document.getElementById('f_tassa').value=T.tax;
   document.getElementById('f_var').checked=(t==='conto'||t==='staking');document.getElementById('f_blk').checked=(t==='buono');
   if(t==='fermi')document.getElementById('f_tasso').value=0}
-function closeForm(){var m=document.getElementById('modal');m.hidden=true;m.innerHTML=''}
+function closeForm(){var m=document.getElementById('modal');var was=!m.hidden;m.hidden=true;m.innerHTML='';if(was&&history.state&&history.state.m){try{history.back()}catch(e){}}}
 function saveForm(id,isNew){
   var g=function(k){return document.getElementById(k).value};
   var nome=g('f_nome').trim();if(!nome){document.getElementById('f_nome').focus();return}
@@ -453,7 +461,7 @@ function importFromHash(){
     var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(rc)pt.push('aggiunte '+rc+(rc===1?' abitudine di spesa':' abitudini di spesa'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
     var tx=pt.join(', ');toast(pt.length?(tx.charAt(0).toUpperCase()+tx.slice(1)+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
   }catch(e){toast('Link di importazione non valido.')}
-  try{history.replaceState(null,'',location.pathname+location.search)}catch(e){location.hash=''}
+  try{history.replaceState({tab:tab},'',location.pathname+location.search)}catch(e){location.hash=''}
 }
 function doImport(){
   var msg=document.getElementById('bkMsg');
@@ -470,7 +478,7 @@ function doReset(){S={pos:[],set:{maxPiatt:60,maxCripto:15,minIdle:500,cashback:
 function findP(id){return S.pos.filter(function(x){return x.id===id})[0]}
 function today(){var d=new Date(),p=function(n){return (n<10?'0':'')+n};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
 function logOp(t){S.log.push({d:today(),t:t});if(S.log.length>60)S.log=S.log.slice(-60)}
-function sheetOpen(title,body){var m=document.getElementById('modal');m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+title+'</h2>'+body+'</div></div>';m.hidden=false}
+function sheetOpen(title,body){var m=document.getElementById('modal');m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+title+'</h2>'+body+'</div></div>';openModal(m)}
 function selPos(idn,sel){return '<select id="'+idn+'">'+S.pos.map(function(p){return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.nome)+' \u2014 '+esc(p.piatt)+' ('+eur(num(p.cap))+')</option>'}).join('')+'</select>'}
 function btns(ok,okTxt){return '<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="'+ok+'">'+okTxt+'</button><button class="sec" onclick="closeForm()">Annulla</button></p>'}
 function fSaldo(id){var p=findP(id);if(!p)return;
@@ -815,7 +823,7 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runInt();runFisse();runPac();render();refreshPrezzi();importFromHash();
+load();runInt();runFisse();runPac();render();refreshPrezzi();try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();
 document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
