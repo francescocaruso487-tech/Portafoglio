@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Il mio portafoglio</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f6feb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1a1d21;--mu:#69707a;--ln:#e2e5ea;--ac:#1f6feb;--ok:#17803d;--wa:#b45309;--er:#c0392b;--bar:#1f6feb22}
+@media (prefers-color-scheme:dark){:root{--bg:#111316;--card:#1b1e23;--tx:#eceef1;--mu:#9aa2ad;--ln:#2b3037;--ac:#5b9dff;--ok:#4cc27a;--wa:#f0a23b;--er:#ff7b6b;--bar:#5b9dff33}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,Roboto,sans-serif;padding-bottom:84px}
+header{padding:18px 16px 6px}
+h1{font-size:20px;margin:0}
+.sub{color:var(--mu);font-size:13px}
+main{padding:8px 12px 24px;max-width:720px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:14px;margin:10px 0}
+.card h2{font-size:15px;margin:0 0 8px}
+.big{font-size:30px;font-weight:700;letter-spacing:-.5px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi .l{color:var(--mu);font-size:12px}.kpi .v{font-size:18px;font-weight:650}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:baseline;padding:4px 0}
+.bar{height:8px;border-radius:5px;background:var(--bar);margin:3px 0 8px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ac);border-radius:5px}
+.mu{color:var(--mu);font-size:13px}
+.tag{display:inline-block;font-size:11px;border:1px solid var(--ln);border-radius:20px;padding:1px 8px;margin:2px 4px 0 0;color:var(--mu)}
+.mini{background:none;color:var(--ac);border:1px solid var(--ln);border-radius:8px;padding:6px 10px;font-size:13px;margin:8px 6px 0 0}
+.acts{display:flex;flex-wrap:wrap}
+.card{box-shadow:0 1px 2px #0000000d}
+.hero{background:linear-gradient(135deg,var(--ac),#7c4dff);color:#fff;border:0}
+.hero .mu,.hero .l{color:#ffffffcc}
+.hero .big,.hero .v{color:#fff}
+.logr{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:4px 0;border-bottom:1px solid var(--ln)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--ln);display:flex;z-index:5;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;color:var(--mu);padding:12px 2px;font-size:12px}
+nav button.on{color:var(--ac);font-weight:700}
+button.pri{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;font-weight:600}
+button.sec{background:none;color:var(--ac);border:1px solid var(--ln);border-radius:10px;padding:10px 14px;font-size:14px}
+button.dan{background:none;color:var(--er);border:1px solid var(--ln);border-radius:10px;padding:10px 14px;font-size:14px}
+.fab{position:fixed;right:16px;bottom:72px;z-index:6;border-radius:30px;padding:14px 20px;box-shadow:0 4px 14px #0004}
+.pos{cursor:pointer}
+.alert{border-left:4px solid var(--wa)}.alert.er{border-left-color:var(--er)}.alert.ok{border-left-color:var(--ok)}.alert.in{border-left-color:var(--ac)}
+.alert b{display:block;margin-bottom:2px}
+.modal{position:fixed;inset:0;background:#0007;z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 3px}
+input,select,textarea{width:100%;font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:10px}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;color:var(--tx);font-size:15px}.chk input{width:auto}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.empty{text-align:center;padding:30px 10px;color:var(--mu)}
+pre.ai{white-space:pre-wrap;font:inherit;margin:8px 0 0}
+.note{font-size:12px;color:var(--mu);margin-top:6px}
+</style>
+</head>
+<body>
+<header><h1>Il mio portafoglio</h1><div class="sub" id="sub"></div></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<div id="modal" hidden></div>
+
+<script>
+/* ===== dati e calcoli ===== */
+var KEY='portafoglio_v1';
+var TIPI={
+ buono:{n:'Buono postale / titolo di Stato',cl:'Sicuri',tax:12.5},
+ conto:{n:'Conto o portafoglio remunerato',cl:'Sicuri',tax:26},
+ obbl:{n:'Obbligazioni',cl:'Sicuri',tax:26},
+ etf:{n:'ETF / piano di accumulo',cl:'Azionario',tax:26},
+ azioni:{n:'Azioni',cl:'Azionario',tax:26},
+ cripto:{n:'Cripto',cl:'Cripto',tax:26},
+ staking:{n:'Staking',cl:'Cripto',tax:26},
+ fermi:{n:'Soldi fermi (nessun interesse)',cl:'Liquidità ferma',tax:0}
+};
+var CLASSI=['Sicuri','Azionario','Cripto','Liquidità ferma'];
+var PIATT=['Poste Italiane','Trade Republic','Revolut','Crypto.com','Intesa Sanpaolo','Altro'];
+var S={pos:[],set:{maxPiatt:60,maxCripto:15,minIdle:500,target:{}},log:[]};
+var tab='quadro';
+
+function num(x){var n=parseFloat(String(x).replace(',','.'));return isFinite(n)?n:0}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function eur(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n)}
+function eur2(n){return new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(n)}
+function pc(n){return (Math.round(n*10)/10).toString().replace('.',',')+'%'}
+function dt(s){var d=new Date(s);return d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'})}
+function sum(a,f){var t=0;for(var i=0;i<a.length;i++)t+=f(a[i]);return t}
+
+/* CALC-START */
+function yearsTo(p){
+  if(p.scad){var d=(new Date(p.scad).getTime()-Date.now())/(864e5*365.25);return Math.max(d,0)}
+  if(num(p.orizz)>0)return num(p.orizz);
+  return null;
+}
+function valueAt(p,Y){
+  var T=yearsTo(p);var t=T==null?Y:Math.min(Y,T);
+  var r=(num(p.tasso)-num(p.costi))/100;if(r<-0.99)r=-0.99;
+  var i=Math.pow(1+r,1/12)-1;var n=Math.round(t*12);
+  var cap=num(p.cap),pm=num(p.pmt);
+  var fv=cap*Math.pow(1+i,n);
+  if(pm){fv+= (Math.abs(i)<1e-12)?pm*n:pm*(Math.pow(1+i,n)-1)/i}
+  var inv=cap+pm*n;var gain=fv-inv;var tax=num(p.tassa)/100;
+  return {lordo:fv,netto:gain>0?inv+gain*(1-tax):fv,inv:inv};
+}
+/* CALC-END */
+
+function normalize(){
+  if(!S||!Array.isArray(S.pos))S={pos:[],set:{}};
+  S.set=S.set||{};S.set.target=S.set.target||{};
+  if(S.set.maxPiatt==null)S.set.maxPiatt=60;if(S.set.maxCripto==null)S.set.maxCripto=15;if(S.set.minIdle==null)S.set.minIdle=500;
+  if(!Array.isArray(S.log))S.log=[];
+}
+function load(){
+  try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.pos))S=o}}catch(e){}
+  normalize();
+}
+var cloud={ref:null,state:'local'},saveT=null;
+function setSub(){
+  var m={local:'salvato su questo dispositivo \u2713',wait:'salvataggio in corso…',ok:'salvato',err:'salvato su questo telefono'}[cloud.state]||'';
+  var el=document.getElementById('sub');if(el)el.textContent='Dati inseriti da te \u00b7 '+m;
+}
+function save(){
+  S.ts=Date.now();
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  setSub();
+}
+function uid(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+
+/* ===== viste ===== */
+function bars(map,tot){
+  var k=Object.keys(map).sort(function(a,b){return map[b]-map[a]});
+  return k.map(function(n){var v=map[n];var w=tot?v/tot*100:0;
+    return '<div class="row"><span>'+esc(n)+'</span><span><b>'+eur(v)+'</b> <span class="mu">'+pc(w)+'</span></span></div><div class="bar"><i style="width:'+w.toFixed(1)+'%"></i></div>'}).join('');
+}
+function bucket(p){var T=yearsTo(p);if(T==null)return 'Senza scadenza';if(T<1)return 'Entro 1 anno';if(T<5)return '1–5 anni';return 'Oltre 5 anni'}
+
+function vQuadro(){
+  var P=S.pos;
+  if(!P.length)return '<div class="card empty">Ancora nessuna posizione.<br><br><button class="pri" onclick="openForm()">Aggiungi la prima</button><br><br><button class="sec" onclick="demo()">Carica dati di esempio</button></div>';
+  var tot=sum(P,function(p){return num(p.cap)});
+  var byP={},byT={},byC={},byH={};
+  P.forEach(function(p){var c=num(p.cap);var t=TIPI[p.tipo]||TIPI.fermi;
+    byP[p.piatt]=(byP[p.piatt]||0)+c;byT[t.n]=(byT[t.n]||0)+c;byC[t.cl]=(byC[t.cl]||0)+c;var b=bucket(p);byH[b]=(byH[b]||0)+c});
+  var wr=tot?sum(P,function(p){return num(p.cap)*num(p.tasso)})/tot:0;
+  var y=[1,5,20].map(function(Y){return {Y:Y,v:sum(P,function(p){return valueAt(p,Y).netto})}});
+  var h='<div class="card hero"><div class="mu">Patrimonio censito</div><div class="big">'+eur(tot)+'</div>'+
+   '<div class="grid" style="margin-top:8px"><div class="kpi"><div class="l">Rendimento medio ponderato (lordo)</div><div class="v">'+pc(wr)+'</div></div>'+
+   '<div class="kpi"><div class="l">Posizioni</div><div class="v">'+P.length+'</div></div></div></div>';
+  h+='<div class="card"><h2>Valore netto stimato nel tempo</h2>'+y.map(function(o){return '<div class="row"><span>Tra '+o.Y+(o.Y===1?' anno':' anni')+'</span><b>'+eur(o.v)+'</b></div>'}).join('')+
+   '<div class="note">Stima al netto delle tasse che inserisci, con i tassi che hai impostato e supponendo che restino costanti. Per ETF e cripto sono ipotesi, non garanzie. Dopo la scadenza di una posizione il suo valore resta fermo.</div></div>';
+  h+='<div class="card"><h2>Per classe</h2>'+bars(byC,tot)+'</div>';
+  h+='<div class="card"><h2>Per piattaforma</h2>'+bars(byP,tot)+'</div>';
+  h+='<div class="card"><h2>Per tipo di prodotto</h2>'+bars(byT,tot)+'</div>';
+  h+='<div class="card"><h2>Per orizzonte</h2>'+bars(byH,tot)+'</div>';
+  return h;
+}
+
+function vPos(){
+  var P=S.pos;
+  if(!P.length)return '<div class="card empty">Nessuna posizione.<br><br><button class="sec" onclick="demo()">Carica dati di esempio</button></div>';
+  var g={};P.forEach(function(p){(g[p.piatt]=g[p.piatt]||[]).push(p)});
+  return '<div style="margin:6px 2px"><button class="sec" onclick="fSposta()">\u21c4 Sposta soldi tra posizioni</button></div>'+Object.keys(g).map(function(k){
+    var t=sum(g[k],function(p){return num(p.cap)});
+    return '<div class="mu" style="margin:14px 4px 0"><b>'+esc(k)+'</b> · '+eur(t)+'</div>'+g[k].map(function(p){
+      var tp=TIPI[p.tipo]||TIPI.fermi;
+      return '<div class="card pos" onclick="openForm(\''+esc(p.id)+'\')"><div class="row"><b>'+esc(p.nome)+'</b><b>'+eur(num(p.cap))+'</b></div>'+
+       '<div class="mu">'+esc(tp.n)+' · tasso '+pc(num(p.tasso))+(num(p.pmt)?' · +'+eur(num(p.pmt))+'/mese':'')+'</div>'+
+       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
+       (p.scad?'<span class="tag">scade '+esc(dt(p.scad))+'</span>':(num(p.orizz)?'<span class="tag">orizzonte '+esc(num(p.orizz))+' anni</span>':''))+'</div>'+
+       '<div class="acts"><button class="mini" onclick="event.stopPropagation();fSaldo(\''+esc(p.id)+'\')">Aggiorna saldo</button><button class="mini" onclick="event.stopPropagation();fSposta(\''+esc(p.id)+'\')">Sposta soldi</button>'+(p.scad||p.bloccato?'<button class="mini" onclick="event.stopPropagation();fRinnova(\''+esc(p.id)+'\')">Rinnova blocco</button>':'')+'</div></div>'}).join('');
+  }).join('');
+}
+
+function vScad(){
+  var P=S.pos.filter(function(p){return p.scad}).sort(function(a,b){return a.scad<b.scad?-1:1});
+  var Q=S.pos.filter(function(p){return !p.scad});
+  if(!S.pos.length)return '<div class="card empty">Nessuna posizione.</div>';
+  var h='';
+  if(P.length){h+='<div class="mu" style="margin:6px 4px">Posizioni con scadenza</div>'+P.map(function(p){
+    var T=yearsTo(p);var days=Math.round((new Date(p.scad).getTime()-Date.now())/864e5);var v=valueAt(p,T);
+    return '<div class="card"><div class="row"><b>'+esc(p.nome)+'</b><span class="mu">'+esc(p.piatt)+'</span></div>'+
+     '<div class="row"><span>'+esc(dt(p.scad))+'</span><span class="mu">'+(days>=0?'tra '+days+' giorni':'scaduta')+'</span></div>'+
+     '<div class="row"><span class="mu">Investito oggi</span><span>'+eur(num(p.cap))+'</span></div>'+
+     '<div class="row"><span class="mu">Netto stimato a scadenza</span><b>'+eur(v.netto)+'</b></div>'+
+     '<div class="row"><span class="mu">Guadagno netto stimato</span><span style="color:var(--ok)">'+eur(v.netto-v.inv)+'</span></div></div>'}).join('')}
+  if(Q.length){h+='<div class="mu" style="margin:14px 4px 6px">Senza scadenza fissa</div>'+Q.map(function(p){
+    var T=yearsTo(p);var txt=T==null?'nessun orizzonte impostato':'orizzonte '+T+' anni';var v=T==null?null:valueAt(p,T);
+    return '<div class="card"><div class="row"><b>'+esc(p.nome)+'</b><span class="mu">'+esc(p.piatt)+'</span></div><div class="mu">'+txt+'</div>'+
+     (v?'<div class="row"><span class="mu">Netto stimato a fine orizzonte</span><b>'+eur(v.netto)+'</b></div>':'')+'</div>'}).join('')}
+  return h;
+}
+
+function consigli(){
+  var P=S.pos,A=[];if(!P.length)return A;
+  var tot=sum(P,function(p){return num(p.cap)});if(!tot)return A;
+  var idle=P.filter(function(p){return (p.tipo==='fermi'||num(p.tasso)<=0.5)&&!p.bloccato});
+  var idleCap=sum(idle,function(p){return num(p.cap)});
+  if(idleCap>=num(S.set.minIdle)){
+    var refs=P.filter(function(p){return p.tipo==='conto'&&num(p.tasso)>0.5}).sort(function(a,b){return num(b.tasso)-num(a.tasso)});
+    var txt=eur(idleCap)+' ('+pc(idleCap/tot*100)+' del totale) non rendono quasi nulla.';
+    if(refs.length){var r=refs[0];txt+=' Al tasso del tuo «'+r.nome+'» ('+pc(num(r.tasso))+') renderebbero circa '+eur(idleCap*num(r.tasso)/100)+' lordi all\'anno.'}
+    txt+=' Tieni comunque una riserva di liquidità per le spese impreviste: quanto, lo decidi tu.';
+    A.push({c:'',t:'Soldi fermi',x:txt});
+  }
+  var byP={};P.forEach(function(p){byP[p.piatt]=(byP[p.piatt]||0)+num(p.cap)});
+  Object.keys(byP).forEach(function(k){var s=byP[k]/tot*100;if(s>S.set.maxPiatt)A.push({c:'',t:'Concentrazione su '+k,x:pc(s)+' del patrimonio è su una sola piattaforma (soglia che hai impostato: '+S.set.maxPiatt+'%). Se è un problema per te, valuta di distribuire i nuovi versamenti altrove.'})});
+  var cr=sum(P,function(p){return (TIPI[p.tipo]||{}).cl==='Cripto'?num(p.cap):0});
+  if(cr/tot*100>S.set.maxCripto)A.push({c:'er',t:'Quota cripto alta',x:'Le cripto sono il '+pc(cr/tot*100)+' del totale (soglia: '+S.set.maxCripto+'%). Sono molto volatili: un calo del 50% farebbe perdere circa '+eur(cr*0.5)+'.'});
+  var vr=sum(P,function(p){return p.variabile&&(TIPI[p.tipo]||{}).cl==='Sicuri'?num(p.cap):0});
+  if(vr/tot>0.3)A.push({c:'in',t:'Molti tassi variabili',x:eur(vr)+' hanno un tasso variabile. Se i tassi di mercato scendono (per esempio per un taglio della BCE), il loro rendimento scende. Un tasso fisso bloccato prima del calo resterebbe tale: è un ragionamento, non una previsione.'});
+  var soon=P.filter(function(p){if(!p.scad)return false;var d=(new Date(p.scad).getTime()-Date.now())/864e5;return d>=0&&d<=90});
+  soon.forEach(function(p){A.push({c:'in',t:'Scadenza vicina: '+p.nome,x:'Scade il '+dt(p.scad)+' (circa '+eur(valueAt(p,yearsTo(p)).netto)+' netti). Decidi per tempo dove reinvestirli e guarda la sezione novità.'})});
+  P.filter(function(p){return p.scad&&new Date(p.scad).getTime()<Date.now()}).forEach(function(p){A.push({c:'ok',t:'Sbloccato: '+p.nome,x:'Il periodo è finito il '+dt(p.scad)+'. Rinnova il blocco o sposta i soldi dalla sezione Posizioni.'})});
+  var cl={};P.forEach(function(p){var c=(TIPI[p.tipo]||TIPI.fermi).cl;cl[c]=(cl[c]||0)+num(p.cap)});
+  var tg=S.set.target||{};var any=CLASSI.some(function(c){return tg[c]!==''&&tg[c]!=null&&num(tg[c])>0});
+  if(any){var lines=[];CLASSI.forEach(function(c){if(tg[c]===''||tg[c]==null)return;var want=tot*num(tg[c])/100,have=cl[c]||0,d=want-have;
+      if(Math.abs(d)>tot*0.02)lines.push((d>0?'Aggiungi ':'Riduci ')+'circa '+eur(Math.abs(d))+' in '+c+' (ora '+pc(have/tot*100)+', obiettivo '+tg[c]+'%)')});
+    A.push({c:lines.length?'':'ok',t:'Ribilanciamento verso i tuoi obiettivi',x:lines.length?lines.join('. ')+'. Le posizioni vincolate non si possono spostare prima della scadenza: usa i nuovi versamenti o i fondi liberi.':'Sei vicino agli obiettivi che hai impostato.'})}
+  var old=P.filter(function(p){return p.agg&&(Date.now()-new Date(p.agg).getTime())/864e5>30});
+  if(old.length)A.push({c:'',t:'Dati da aggiornare',x:old.length+' posizioni non vengono aggiornate da oltre 30 giorni: '+old.slice(0,4).map(function(p){return p.nome}).join(', ')+(old.length>4?'…':'')+'.'});
+  if(!A.length)A.push({c:'ok',t:'Nessun avviso',x:'Con le soglie e i dati attuali non risultano problemi evidenti.'});
+  return A;
+}
+
+function vCons(){
+  var h=consigli().map(function(a){return '<div class="card alert '+a.c+'"><b>'+esc(a.t)+'</b>'+esc(a.x)+'</div>'}).join('');
+  if(!S.pos.length)return '<div class="card empty">Aggiungi prima qualche posizione.</div>';
+  h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
+  return h;
+}
+
+function vDati(){
+  var t=S.set.target||{};
+  return '<div class="card"><h2>Obiettivi di allocazione (%)</h2><div class="mu">Facoltativo: serve per il ribilanciamento.</div><div class="two">'+
+   CLASSI.map(function(c,i){return '<div><label>'+esc(c)+'</label><input inputmode="decimal" id="tg'+i+'" value="'+esc(t[c]==null?'':t[c])+'"></div>'}).join('')+'</div>'+
+   '<div class="two"><div><label>Soglia max per piattaforma (%)</label><input inputmode="decimal" id="sPi" value="'+esc(S.set.maxPiatt)+'"></div><div><label>Soglia max cripto (%)</label><input inputmode="decimal" id="sCr" value="'+esc(S.set.maxCripto)+'"></div></div>'+
+   '<label>Segnala soldi fermi solo sopra (€)</label><input inputmode="decimal" id="sId" value="'+esc(S.set.minIdle)+'">'+
+   '<p><button class="sec" onclick="saveSet()">Salva obiettivi e soglie</button></p></div>'+
+   '<div class="card"><h2>Backup</h2><div class="mu">Ogni modifica si salva da sola su questo dispositivo, senza account e senza internet. Se cancelli i dati del browser o disinstalli l\'app i dati si perdono: scarica ogni tanto il file di backup.</div>'+
+   '<p><button class="pri" onclick="doDownload()">Scarica file di backup</button> <button class="sec" onclick="doCopy()">Copia testo</button></p><label>Ripristina da file</label><input type="file" accept=".json,application/json" onchange="doFile(this)"><label>Incolla qui un backup per ripristinarlo</label><textarea id="imp" rows="4"></textarea>'+
+   '<p><button class="sec" onclick="doImport()">Ripristina da backup</button> <button class="dan" onclick="doReset()">Cancella tutto</button></p><div id="bkMsg" class="note"></div></div>'+
+   '<div class="card"><h2>Ultime operazioni</h2>'+(S.log.length?S.log.slice().reverse().slice(0,30).map(function(l){return '<div class="logr"><span>'+esc(l.t)+'</span><span class="mu">'+esc(dt(l.d))+'</span></div>'}).join(''):'<div class="mu">Nessuna operazione registrata.</div>')+'</div>'+
+   '<div class="note" style="padding:0 6px">Strumento di calcolo personale: non è una consulenza finanziaria. Le aliquote sono modificabili; verifica sempre quelle in vigore.</div>';
+}
+
+/* ===== azioni ===== */
+function render(){
+  setSub();
+  var m=document.getElementById('main');
+  m.innerHTML={quadro:vQuadro,pos:vPos,scad:vScad,cons:vCons,dati:vDati}[tab]();
+  var names=[['quadro','Quadro'],['pos','Posizioni'],['scad','Scadenze'],['cons','Consigli'],['dati','Dati']];
+  document.getElementById('nav').innerHTML=names.map(function(n){return '<button class="'+(n[0]===tab?'on':'')+'" onclick="go(\''+n[0]+'\')">'+n[1]+'</button>'}).join('');
+  if(tab==='pos'||tab==='quadro'&&S.pos.length)addFab();else{var f=document.getElementById('fab');if(f)f.remove()}
+}
+function addFab(){if(document.getElementById('fab'))return;var b=document.createElement('button');b.id='fab';b.className='pri fab';b.textContent='+ Aggiungi';b.onclick=function(){openForm()};document.body.appendChild(b)}
+function go(t){tab=t;render();window.scrollTo(0,0)}
+
+function demo(){
+  var d=function(y){var x=new Date();x.setFullYear(x.getFullYear()+y);return x.toISOString().slice(0,10)};var n=new Date().toISOString().slice(0,10);
+  S.pos=[
+   {id:uid(),nome:'Buono postale (esempio)',piatt:'Poste Italiane',tipo:'buono',cap:3000,tasso:3,tassa:12.5,costi:0,scad:d(4),orizz:'',pmt:0,variabile:false,bloccato:true,agg:n},
+   {id:uid(),nome:'Portafoglio 2,5% (esempio)',piatt:'Trade Republic',tipo:'conto',cap:2000,tasso:2.5,tassa:26,costi:0,scad:'',orizz:'',pmt:0,variabile:true,bloccato:false,agg:n},
+   {id:uid(),nome:'ETF globale PAC (esempio)',piatt:'Trade Republic',tipo:'etf',cap:5000,tasso:5,tassa:26,costi:0.2,scad:'',orizz:20,pmt:100,variabile:false,bloccato:false,agg:n},
+   {id:uid(),nome:'Bitcoin (esempio)',piatt:'Trade Republic',tipo:'cripto',cap:1000,tasso:0,tassa:26,costi:0,scad:'',orizz:10,pmt:0,variabile:false,bloccato:false,agg:n},
+   {id:uid(),nome:'Cronos staking (esempio)',piatt:'Crypto.com',tipo:'staking',cap:500,tasso:6,tassa:26,costi:0,scad:'',orizz:'',pmt:0,variabile:true,bloccato:false,agg:n},
+   {id:uid(),nome:'Conto corrente (esempio)',piatt:'Intesa Sanpaolo',tipo:'fermi',cap:4000,tasso:0,tassa:0,costi:0,scad:'',orizz:'',pmt:0,variabile:false,bloccato:false,agg:n}];
+  save();render();
+}
+
+function openForm(id){
+  var p=id?S.pos.filter(function(x){return x.id===id})[0]:null;
+  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false};
+  var opt=function(list,sel,lab){return list.map(function(k){var v=lab?k:k;return '<option value="'+esc(k)+'"'+(k===sel?' selected':'')+'>'+esc(lab?lab(k):k)+'</option>'}).join('')};
+  var m=document.getElementById('modal');
+  m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+(isNew?'Nuova posizione':'Modifica posizione')+'</h2>'+
+  '<label>Nome</label><input id="f_nome" value="'+esc(p.nome)+'" placeholder="es. Buono 4 anni">'+
+  '<div class="two"><div><label>Piattaforma</label><select id="f_piatt">'+opt(PIATT,p.piatt)+'</select></div><div><label>Tipo</label><select id="f_tipo" onchange="tipoChange()">'+opt(Object.keys(TIPI),p.tipo,function(k){return TIPI[k].n})+'</select></div></div>'+
+  '<div class="two"><div><label>Capitale oggi (€)</label><input id="f_cap" inputmode="decimal" value="'+esc(p.cap)+'"></div><div><label>Rendimento annuo lordo (%)</label><input id="f_tasso" inputmode="decimal" value="'+esc(p.tasso)+'"></div></div>'+
+  '<div class="two"><div><label>Tasse sul guadagno (%)</label><input id="f_tassa" inputmode="decimal" value="'+esc(p.tassa)+'"></div><div><label>Costi annui (%)</label><input id="f_costi" inputmode="decimal" value="'+esc(p.costi)+'"></div></div>'+
+  '<div class="two"><div><label>Scadenza (se c\'è)</label><input id="f_scad" type="date" value="'+esc(p.scad)+'"></div><div><label>Oppure orizzonte (anni)</label><input id="f_orizz" inputmode="decimal" value="'+esc(p.orizz)+'"></div></div>'+
+  '<label>Versamento mensile (€, facoltativo)</label><input id="f_pmt" inputmode="decimal" value="'+esc(p.pmt)+'">'+
+  '<div class="chk"><input type="checkbox" id="f_var"'+(p.variabile?' checked':'')+'><span>Tasso variabile</span></div>'+
+  '<div class="chk"><input type="checkbox" id="f_blk"'+(p.bloccato?' checked':'')+'><span>Vincolato (non posso ritirarlo prima della scadenza)</span></div>'+
+  '<div class="note">Per ETF e cripto il rendimento è un\'ipotesi tua (anche 0). Per i buoni usa il rendimento medio annuo che ti interessa.</div>'+
+  '<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="saveForm(\''+esc(p.id)+'\','+(isNew?'true':'false')+')">Salva</button><button class="sec" onclick="closeForm()">Annulla</button>'+(isNew?'':'<button class="dan" onclick="delPos(\''+esc(p.id)+'\')">Elimina</button>')+'</p></div></div>';
+  m.hidden=false;
+}
+function tipoChange(){var t=document.getElementById('f_tipo').value;var T=TIPI[t];document.getElementById('f_tassa').value=T.tax;
+  document.getElementById('f_var').checked=(t==='conto'||t==='staking');document.getElementById('f_blk').checked=(t==='buono');
+  if(t==='fermi')document.getElementById('f_tasso').value=0}
+function closeForm(){var m=document.getElementById('modal');m.hidden=true;m.innerHTML=''}
+function saveForm(id,isNew){
+  var g=function(k){return document.getElementById(k).value};
+  var nome=g('f_nome').trim();if(!nome){document.getElementById('f_nome').focus();return}
+  var o={id:id,nome:nome,piatt:g('f_piatt'),tipo:g('f_tipo'),cap:num(g('f_cap')),tasso:num(g('f_tasso')),tassa:num(g('f_tassa')),costi:num(g('f_costi')),
+   scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:new Date().toISOString().slice(0,10)};
+  if(isNew)S.pos.push(o);else S.pos=S.pos.map(function(x){return x.id===id?o:x});
+  save();closeForm();render();
+}
+function delPos(id){S.pos=S.pos.filter(function(x){return x.id!==id});save();closeForm();render()}
+function saveSet(){
+  CLASSI.forEach(function(c,i){var v=document.getElementById('tg'+i).value.trim();S.set.target[c]=v===''?'':num(v)});
+  S.set.maxPiatt=num(document.getElementById('sPi').value)||60;S.set.maxCripto=num(document.getElementById('sCr').value)||15;S.set.minIdle=num(document.getElementById('sId').value);save();
+  document.getElementById('bkMsg').textContent='Salvato.';
+}
+function backupText(){return JSON.stringify(S)}
+function doCopy(){
+  var msg=document.getElementById('bkMsg');var t=backupText();
+  var fb=function(){var ta=document.getElementById('imp');ta.value=t;ta.focus();ta.select();msg.textContent='Copia non riuscita: il backup è nel riquadro qui sotto, selezionalo e copialo a mano.'};
+  try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Backup copiato. Incollalo in una nota e conservalo.'},fb)}catch(e){fb()}
+}
+function doDownload(){
+  var msg=document.getElementById('bkMsg');
+  try{var b=new Blob([backupText()],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='portafoglio-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);msg.textContent='Backup scaricato.'}catch(e){msg.textContent='Download non riuscito: usa "Copia testo".'}
+}
+function doFile(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(){document.getElementById('imp').value=String(r.result);doImport()};r.readAsText(f)}
+function doImport(){
+  var msg=document.getElementById('bkMsg');
+  try{var o=JSON.parse(document.getElementById('imp').value);if(!o||!Array.isArray(o.pos))throw 0;
+    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||'')}});
+    o.set=o.set||{};o.set.target=o.set.target||{};o.set.maxPiatt=num(o.set.maxPiatt)||60;o.set.maxCripto=num(o.set.maxCripto)||15;o.set.minIdle=o.set.minIdle==null?500:num(o.set.minIdle);
+    S=o;normalize();save();render();
+  }catch(e){msg.textContent='Backup non valido.'}
+}
+function doReset(){S={pos:[],set:{maxPiatt:60,maxCripto:15,minIdle:500,target:{}},log:[]};save();render()}
+
+
+/* ===== azioni rapide ===== */
+function findP(id){return S.pos.filter(function(x){return x.id===id})[0]}
+function today(){return new Date().toISOString().slice(0,10)}
+function logOp(t){S.log.push({d:today(),t:t});if(S.log.length>60)S.log=S.log.slice(-60)}
+function sheetOpen(title,body){var m=document.getElementById('modal');m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+title+'</h2>'+body+'</div></div>';m.hidden=false}
+function selPos(idn,sel){return '<select id="'+idn+'">'+S.pos.map(function(p){return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.nome)+' \u2014 '+esc(p.piatt)+' ('+eur(num(p.cap))+')</option>'}).join('')+'</select>'}
+function btns(ok,okTxt){return '<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="'+ok+'">'+okTxt+'</button><button class="sec" onclick="closeForm()">Annulla</button></p>'}
+function fSaldo(id){var p=findP(id);if(!p)return;
+  sheetOpen('Aggiorna saldo','<div class="mu">'+esc(p.nome)+' \u00b7 '+esc(p.piatt)+'</div><label>Nuovo capitale (\u20ac)</label><input id="q_cap" inputmode="decimal" value="'+esc(p.cap)+'">'+btns("doSaldo('"+esc(id)+"')",'Salva'))}
+function doSaldo(id){var p=findP(id);var v=num(document.getElementById('q_cap').value);var old=num(p.cap);p.cap=v;p.agg=today();logOp('Saldo '+p.nome+': '+eur2(old)+' \u2192 '+eur2(v));save();closeForm();render()}
+function fSposta(id){
+  if(S.pos.length<2){sheetOpen('Sposta soldi','<div class="mu">Servono almeno due posizioni.</div>'+btns('closeForm()','Ok'));return}
+  var from=id||S.pos[0].id;var to=(S.pos.filter(function(p){return p.id!==from})[0]||S.pos[0]).id;
+  sheetOpen('Sposta soldi','<label>Da</label>'+selPos('q_from',from)+'<label>A</label>'+selPos('q_to',to)+'<label>Importo (\u20ac)</label><input id="q_amt" inputmode="decimal" placeholder="0">'+
+   '<div class="note">Il capitale viene tolto da una posizione e aggiunto all\'altra. Se sposti su un prodotto nuovo, crealo prima con \u201c+ Aggiungi\u201d (anche con 0 \u20ac).</div>'+btns('doSposta()','Sposta'))}
+function doSposta(){
+  var a=findP(document.getElementById('q_from').value),b=findP(document.getElementById('q_to').value),amt=num(document.getElementById('q_amt').value);
+  if(!a||!b||a.id===b.id||amt<=0||amt>num(a.cap)+0.005){document.getElementById('q_amt').focus();return}
+  a.cap=Math.round((num(a.cap)-amt)*100)/100;b.cap=Math.round((num(b.cap)+amt)*100)/100;a.agg=b.agg=today();
+  logOp('Spostati '+eur2(amt)+' da '+a.nome+' a '+b.nome);save();closeForm();render()}
+function fRinnova(id){var p=findP(id);if(!p)return;
+  sheetOpen('Rinnova blocco','<div class="mu">'+esc(p.nome)+' \u00b7 '+esc(p.piatt)+'</div><label>Importo da bloccare di nuovo (\u20ac), con gli interessi maturati</label><input id="q_cap" inputmode="decimal" value="'+esc(p.cap)+'">'+
+   '<label>Nuova scadenza</label><input id="q_scad" type="date" value="">'+'<label>Nuovo rendimento annuo lordo (%)</label><input id="q_tasso" inputmode="decimal" value="'+esc(p.tasso)+'">'+btns("doRinnova('"+esc(id)+"')",'Rinnova'))}
+function doRinnova(id){var p=findP(id);var s=document.getElementById('q_scad').value;if(!s){document.getElementById('q_scad').focus();return}
+  var old=num(p.cap);p.cap=num(document.getElementById('q_cap').value);p.scad=s;p.bloccato=true;p.tasso=num(document.getElementById('q_tasso').value);p.agg=today();
+  logOp('Rinnovato '+p.nome+': '+eur2(old)+' \u2192 '+eur2(p.cap)+', fino al '+dt(s));save();closeForm();render()}
+
+/* ===== riepilogo per Claude ===== */
+function promptText(){
+  var data={oggi:today(),posizioni:S.pos.map(function(p){return {nome:p.nome,piattaforma:p.piatt,tipo:(TIPI[p.tipo]||{}).n,capitale:num(p.cap),tasso_lordo:num(p.tasso),tasse:num(p.tassa),costi:num(p.costi),scadenza:p.scad||null,orizzonte_anni:p.orizz||null,versamento_mensile:num(p.pmt),variabile:!!p.variabile,vincolato:!!p.bloccato}}),obiettivi:S.set.target,soglie:{piattaforma:S.set.maxPiatt,cripto:S.set.maxCripto}};
+  return 'Ti incollo il mio portafoglio personale (inserito a mano, in euro). Analizzalo in italiano, con elenco puntato breve: (1) cosa è inefficiente (soldi fermi, concentrazioni, scadenze, tassi variabili); (2) alternative da valutare, cercando sul web i prodotti e i tassi attuali disponibili in Italia (buoni postali, BTP, conti remunerati, ETF), con ragionamenti condizionali del tipo "se i tassi scendono, allora...". Non prevedere i mercati, non garantire rendimenti, indica le fonti e ricorda che non è consulenza finanziaria personalizzata. Dati: '+JSON.stringify(data);
+}
+function copyPrompt(){
+  var msg=document.getElementById('aiMsg');var t=promptText();
+  try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
+}
+
+load();render();
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+</script>
+</body>
+</html>
