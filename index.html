@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.8',APP_DATE='24 nov 2026';
+var APP_VERSION='2.9',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.9','Tocca qualsiasi numero, piattaforma, avviso o spesa per un pop-up con i dettagli e il calcolo'],
  ['2.8','Cripto con prezzo automatico: i piani mensili aumentano anche la quantit\u00e0, cos\u00ec il valore resta corretto'],
  ['2.7','Tasto indietro: chiude la schermata aperta, poi torna alla scheda precedente, fino alla home'],
  ['2.6','Uscite fisse annuali con il loro mese: compaiono nei prossimi addebiti e scalano il saldo il giorno giusto'],
@@ -243,22 +244,111 @@ function vQuadro0(){
   var wr=tot?sum(P,function(p){return num(p.cap)*tEff(p)})/tot:0;
   var y1=sum(P,function(p){return valueAt(p,1).netto}),y20=sum(P,function(p){return valueAt(p,20).netto});
   var d1=y1-tot;
-  var h='<div class="hero"><div class="lab">Patrimonio censito</div><div class="tot">'+esc(new Intl.NumberFormat('it-IT',{maximumFractionDigits:0}).format(Math.round(tot)))+'<small>\u20ac</small></div>'+
-   '<div class="pills"><span class="pill a">rendimento medio '+pc(wr)+'</span><span class="pill '+(d1>=0?'g':'')+'">'+(d1>=0?'+':'')+esc(eur(d1))+' netti in 1 anno</span><span class="pill">'+P.length+' posizioni</span>'+(intOggi()>0?'<span class="pill g">\u2248 +'+esc(eur2(intOggi()))+' al giorno</span>':'')+(intTotale()>0?'<span class="pill g">interessi accreditati '+esc(eur2(intTotale()))+'</span>':'')+'</div>'+
+  var h='<div class="hero"><div class="lab">Patrimonio censito</div><div class="tot" style="cursor:pointer" onclick="iTot()">'+esc(new Intl.NumberFormat('it-IT',{maximumFractionDigits:0}).format(Math.round(tot)))+'<small>\u20ac</small></div>'+
+   '<div class="pills"><span class="pill a" style="cursor:pointer" onclick="iRend()">rendimento medio '+pc(wr)+'</span><span class="pill '+(d1>=0?'g':'')+'" style="cursor:pointer" onclick="i1y()">'+(d1>=0?'+':'')+esc(eur(d1))+' netti in 1 anno</span><span class="pill" style="cursor:pointer" onclick="iPosN()">'+P.length+' posizioni</span>'+(intOggi()>0?'<span class="pill g" style="cursor:pointer" onclick="iDay()">\u2248 +'+esc(eur2(intOggi()))+' al giorno</span>':'')+(intTotale()>0?'<span class="pill g" style="cursor:pointer" onclick="iAcc()">interessi accreditati '+esc(eur2(intTotale()))+'</span>':'')+'</div>'+
    growth(P)+'<div class="note" style="margin:0 0 12px">Linea piena: valore netto stimato. Tratteggio: quanto hai versato. Sono ipotesi con i tassi che hai impostato, non garanzie.</div></div>';
   var up=P.filter(function(p){return p.scad}).sort(function(a,b){return a.scad<b.scad?-1:1}).slice(0,4);
   if(up.length){h+='<div class="sechead"><h2>Prossime scadenze</h2><button class="chip" onclick="go(\'scad\')">Tutte</button></div><div class="card" style="padding:4px 14px">'+up.map(function(p){
     var days=Math.round((new Date(p.scad).getTime()-Date.now())/864e5);var cls=days<0?'x':(days<=30?'s':'');var txt=days<0?'sbloccato':(days===0?'oggi':(days<60?'tra '+days+' giorni':dt(p.scad)));
-    return '<div class="sc"><span class="dot" style="background:'+col(PCOL,p.piatt,0)+'"></span><div class="t"><b>'+esc(p.nome)+'</b><span class="mu">'+esc(p.piatt)+' \u00b7 '+esc(eur(valueAt(p,yearsTo(p)).netto))+' netti</span></div><span class="d '+cls+'">'+esc(txt)+'</span></div>'}).join('')+'</div>'}
+    return '<div class="sc" style="cursor:pointer" onclick="fDett(\''+esc(p.id)+'\')"><span class="dot" style="background:'+col(PCOL,p.piatt,0)+'"></span><div class="t"><b>'+esc(p.nome)+'</b><span class="mu">'+esc(p.piatt)+' \u00b7 '+esc(eur(valueAt(p,yearsTo(p)).netto))+' netti</span></div><span class="d '+cls+'">'+esc(txt)+'</span></div>'}).join('')+'</div>'}
   var m=dmode==='piatt'?[byP,PCOL]:(dmode==='tipo'?[byT,{}]:[byC,CCOL]);
   var chip=function(k,l){return '<button class="chip'+(dmode===k?' on':'')+'" onclick="setD(\''+k+'\')">'+l+'</button>'};
   h+='<div class="sechead"><h2>Come \u00e8 diviso</h2><div class="chips">'+chip('classe','Classe')+chip('piatt','Piattaforma')+chip('tipo','Prodotto')+'</div></div><div class="card">'+donut(m[0],tot,m[1])+'</div>';
   h+='<div class="sechead"><h2>Le tue piattaforme</h2></div><div class="hs">'+Object.keys(byP).sort(function(a,b){return byP[b]-byP[a]}).map(function(k){var c=col(PCOL,k,0);var r=byP[k]?rt[k]/byP[k]:0;
-    return '<div class="pc" style="--c:'+c+'" onclick="go(\'pos\')"><div class="n">'+esc(k)+'</div><div class="v">'+esc(eur(byP[k]))+'</div><div class="m">'+pc(byP[k]/tot*100)+' del totale<br>'+cnt[k]+(cnt[k]===1?' posizione':' posizioni')+' \u00b7 media '+pc(r)+'</div></div>'}).join('')+'</div>';
+    return '<div class="pc" style="--c:'+c+'" onclick="iPiatt(\''+esc(k)+'\')"><div class="n">'+esc(k)+'</div><div class="v">'+esc(eur(byP[k]))+'</div><div class="m">'+pc(byP[k]/tot*100)+' del totale<br>'+cnt[k]+(cnt[k]===1?' posizione':' posizioni')+' \u00b7 media '+pc(r)+'</div></div>'}).join('')+'</div>';
   h+='<div class="sechead"><h2>Per orizzonte</h2></div><div class="card">'+bars(byH,tot)+'</div>';
   return h;
 }
 
+
+var INFO_TIPO={
+ buono:"Titolo emesso da Cassa Depositi e Prestiti, garantito dallo Stato e venduto da Poste. Gli interessi sono tassati al 12,5%. Non ha un prezzo di mercato: il capitale cresce secondo le condizioni della serie. L'app non accredita gli interessi giorno per giorno: li mostra come stima netta a scadenza. Il rimborso prima della scadenza \u00e8 possibile ma segue le regole della serie: controlla la tabella dei rendimenti per periodo.",
+ conto:"Soldi disponibili con interesse variabile, di solito tassato al 26%. L'app accredita ogni giorno la stima netta e la somma al saldo. Il tasso pu\u00f2 cambiare quando cambia il mercato, e nei conti a livelli (come Revolut) scende oltre il tetto. Ogni tanto confronta il saldo con l'app vera.",
+ obbl:"Obbligazioni o fondi obbligazionari: il prezzo oscilla con i tassi di mercato. Se i tassi salgono, i prezzi tendono a scendere; se scendono, a salire. Tasse al 26% sul guadagno. Il valore va aggiornato a mano con Aggiorna saldo.",
+ etf:"Fondo che replica un indice. Il valore cambia con il mercato e non \u00e8 garantito. Il rendimento nell'app \u00e8 un'ipotesi tua, non una previsione. Tasse al 26% sul guadagno, calcolate nella stima netta. Il valore va aggiornato a mano con Aggiorna saldo.",
+ azioni:"Quota di una singola azienda: pi\u00f9 rischio di un ETF diversificato. Il rendimento nell'app \u00e8 un'ipotesi tua. Tasse al 26% sul guadagno. Il valore va aggiornato a mano.",
+ cripto:"Valore molto variabile, nessun interesse. Per la normativa attuale la tassa sul guadagno \u00e8 al 33% dal 2026 (26% per alcuni stablecoin): verifica con un commercialista. Se hai inserito quantit\u00e0 e codice prezzo, il valore in euro si aggiorna da solo.",
+ staking:"Premi di staking o Earn pagati di solito nella stessa moneta: il tasso \u00e8 una stima variabile che cambia nel tempo. L'app li aggiunge ogni giorno alla quantit\u00e0, e il valore in euro segue il prezzo. Il guadagno \u00e8 tassato quando vendi o converti.",
+ fermi:"Soldi senza interesse: non perdono valore nominale, ma l'inflazione li erode nel tempo. Va bene per la liquidit\u00e0 che usi subito."
+};
+var INFO_CONS=[
+ ['Soldi fermi',"Segnalo i soldi fermi o con tasso quasi nullo sopra la soglia che hai impostato in Dati. Una riserva per gli imprevisti ha senso: quanto tenerne lo decidi tu."],
+ ['Concentrazione',"Avvisa quando una sola piattaforma supera la soglia che hai impostato in Dati. \u00c8 un'indicazione di rischio (un solo operatore), non un divieto."],
+ ['Quota cripto',"Avvisa quando le cripto superano la soglia impostata in Dati. Il loro valore pu\u00f2 oscillare molto."],
+ ['Molti tassi',"Con un tasso variabile il rendimento segue il mercato: se i tassi scendono, rendono meno; se salgono, di pi\u00f9. Un tasso fisso bloccato prima di un calo resterebbe uguale. \u00c8 un ragionamento, non una previsione."],
+ ['Cash Trade',"I piani partono nel giorno impostato: se il cash non basta, il piano pu\u00f2 non partire. Sposta in anticipo la differenza."],
+ ['Oltre il tetto',"Sopra il tetto il tasso \u00e8 pi\u00f9 basso. Spostare il sovrappi\u00f9 dove il tasso alto non ha limite evita di rendere meno."],
+ ['Uscite fisse',"Confronta le uscite fisse mensili con gli interessi netti stimati che le coprono."],
+ ['Scadenza vicina',"Quando un vincolo sta per finire puoi rinnovarlo o spostare i soldi. Aprendo la posizione vedi il netto stimato."],
+ ['Sbloccato',"Il vincolo \u00e8 finito: i soldi sono disponibili. Valuta se rinnovare o spostare."],
+ ['Ribilanciamento',"Confronta la divisione attuale per classe con gli obiettivi che hai impostato in Dati."],
+ ['Dati da aggiornare',"Alcune posizioni non hanno un aggiornamento recente: controlla il saldo con l'app vera e usa Aggiorna saldo."]
+];
+function infoOpen(t,b){sheetOpen(t,b+'<p><button class="pri" onclick="closeForm()">Chiudi</button></p>')}
+function irowS(a,b,sub,oc){return '<div class="row" style="padding:8px 0;'+(oc?'cursor:pointer':'')+'"'+(oc?' onclick="'+oc+'"':'')+'><span>'+a+(sub?'<br><span class="mu" style="font-size:12px">'+sub+'</span>':'')+'</span><b>'+b+'</b></div>'}
+function isec(t){return '<div class="mu" style="margin:14px 0 2px"><b>'+t+'</b></div>'}
+function pRows(L,fn){return L.map(function(p){var r=fn(p);return irowS(esc(p.nome),r[0],r[1],"fDett('"+esc(p.id)+"')")}).join('')}
+function byCap(L){return L.slice().sort(function(a,b){return num(b.cap)-num(a.cap)})}
+function iTot(){
+  var P=S.pos,tot=sum(P,function(p){return num(p.cap)}),bP={},bC={},bH={};
+  P.forEach(function(p){var c=num(p.cap),t=TIPI[p.tipo]||TIPI.fermi;bP[p.piatt]=(bP[p.piatt]||0)+c;bC[t.cl]=(bC[t.cl]||0)+c;var k=bucket(p);bH[k]=(bH[k]||0)+c});
+  var rows=function(o,tap){return Object.keys(o).sort(function(a,b){return o[b]-o[a]}).map(function(k){return irowS(esc(k),esc(eur(o[k])),pc(tot?o[k]/tot*100:0),tap?"iPiatt('"+esc(k)+"')":'')}).join('')};
+  infoOpen('Patrimonio censito','<div class="mu">Somma di tutte le posizioni ai valori che hai inserito o che l\'app ha aggiornato (prezzi cripto, interessi, piani). Totale: <b>'+esc(eur2(tot))+'</b>.</div>'+isec('Per piattaforma (tocca per i dettagli)')+rows(bP,true)+isec('Per classe')+rows(bC)+isec('Per orizzonte')+rows(bH)+'<div class="note">Non sono i saldi ufficiali delle banche: ogni tanto confrontali con le app vere.</div>')
+}
+function iRend(){
+  var P=S.pos.filter(function(p){return num(p.cap)>0}),tot=sum(P,function(p){return num(p.cap)});
+  var L=P.slice().sort(function(a,b){return num(b.cap)*tEff(b)-num(a.cap)*tEff(a)});
+  infoOpen('Rendimento medio','<div class="mu">\u00c8 la media dei tassi pesata sui soldi: ogni tasso conta in proporzione al capitale. Sono i tassi lordi che hai impostato (per ETF e azioni sono ipotesi tue, non previsioni). Cripto senza interesse contano 0.</div>'+isec('Quanto contribuisce ogni posizione, in euro lordi all\'anno')+pRows(L,function(p){return [esc(eur(num(p.cap)*tEff(p)/100)),'tasso '+pc(tEff(p))+' su '+esc(eur(num(p.cap)))]})+'<div class="note">Totale lordo stimato: '+esc(eur(sum(P,function(p){return num(p.cap)*tEff(p)/100})))+' su '+esc(eur(tot))+'.</div>')
+}
+function i1y(){
+  var P=byCap(S.pos),rows=pRows(P,function(p){var v=valueAt(p,1).netto,d=v-num(p.cap);return [(d>=0?'+':'')+esc(eur(d)),esc(eur(num(p.cap)))+' \u2192 '+esc(eur(v))]});
+  infoOpen('Netto in 1 anno','<div class="mu">Differenza tra il valore stimato tra un anno, al netto delle tasse, e quello di oggi. Include i versamenti mensili dei piani e usa i tassi che hai impostato. \u00c8 un\'ipotesi, non una garanzia.</div>'+isec('Per posizione')+rows)
+}
+function iPosN(){infoOpen('Posizioni','<div class="mu">Tocca una posizione per i dettagli.</div>'+pRows(byCap(S.pos),function(p){return [esc(eur(num(p.cap))),esc(p.piatt)]}))}
+function iDay(){
+  var L=S.pos.filter(function(p){return accrues(p)&&ACC.indexOf(p.tipo)>=0});
+  infoOpen('Interessi al giorno','<div class="mu">Stima di quanto maturi oggi. Per conti e cash \u00e8 gi\u00e0 al netto delle tasse (come li accreditano le banche); per lo staking \u00e8 lordo perch\u00e9 i premi arrivano in moneta. Buoni, ETF e azioni non maturano giorno per giorno.</div>'+pRows(L,function(p){var d=num(p.cap)*tEff(p)/100/365;if(p.tipo!=='staking')d*=1-num(p.tassa)/100;return [esc(eur2(d)),'tasso '+pc(tEff(p))+(p.tipo==='staking'?' lordo':' netto')]})+'<div class="note">Totale: '+esc(eur2(intOggi()))+' al giorno.</div>')
+}
+function iAcc(){
+  var L=S.pos.filter(function(p){return num(p.intTot)>0}).sort(function(a,b){return num(b.intTot)-num(a.intTot)});
+  infoOpen('Interessi accreditati','<div class="mu">Interessi che l\'app ha aggiunto da sola ai saldi da quando segue le posizioni. Il totale \u00e8 '+esc(eur2(intTotale()))+'.</div>'+pRows(L,function(p){return [esc(eur2(num(p.intTot))),esc(p.piatt)]}))
+}
+function iPiatt(k){
+  var L=byCap(S.pos.filter(function(p){return p.piatt===k})),tot=sum(S.pos,function(p){return num(p.cap)}),t=sum(L,function(p){return num(p.cap)});
+  var gr=sum(L,function(p){return num(p.cap)*tEff(p)/100}),nt=sum(L,function(p){return num(p.cap)*tEff(p)/100*(1-num(p.tassa)/100)});
+  var sc=L.filter(function(p){return p.scad}).sort(function(a,b){return a.scad<b.scad?-1:1}).slice(0,3);
+  infoOpen(esc(k),irowS('Totale',esc(eur2(t)),pc(tot?t/tot*100:0)+' del patrimonio')+irowS('Tasso medio',pc(t?gr/t*100:0),'pesato sui soldi')+irowS('Interessi stimati in un anno',esc(eur(nt)),'netti; '+esc(eur(gr))+' lordi')+
+   isec('Posizioni (tocca per i dettagli)')+pRows(L,function(p){return [esc(eur(num(p.cap))),esc((TIPI[p.tipo]||TIPI.fermi).n)]})+
+   (sc.length?isec('Prossime scadenze')+sc.map(function(p){return irowS(esc(p.nome),esc(dt(p.scad)),'netto stimato '+esc(eur(valueAt(p,yearsTo(p)).netto)),"fDett('"+esc(p.id)+"')")}).join(''):'')+
+   '<p><button class="sec" onclick="closeForm();openG=\''+esc(k)+'\';go(\'pos\')">Apri le posizioni</button></p>')
+}
+function iCons(i){
+  var a=consigli()[i];if(!a)return;var P=S.pos,rel=[];
+  if(/^Soldi fermi/.test(a.t))rel=P.filter(function(p){return (p.tipo==='fermi'||num(p.tasso)<=0.5)&&!p.bloccato});
+  else if(/^Concentrazione su /.test(a.t)){var pn=a.t.replace('Concentrazione su ','');rel=P.filter(function(p){return p.piatt===pn})}
+  else if(/^Oltre il tetto su /.test(a.t)){var pt=a.t.replace('Oltre il tetto su ','');rel=P.filter(function(p){return p.piatt===pt&&num(p.tetto)>0})}
+  else if(/^Quota cripto/.test(a.t))rel=P.filter(function(p){return (TIPI[p.tipo]||{}).cl==='Cripto'});
+  else if(/^Molti tassi/.test(a.t))rel=P.filter(function(p){return p.variabile});
+  else if(/^Cash Trade/.test(a.t))rel=P.filter(function(p){return num(p.pmt)>0&&num(p.pacGiorno)>=1});
+  else if(/^(Scadenza vicina|Sbloccato): /.test(a.t)){var nm=a.t.replace(/^(Scadenza vicina|Sbloccato): /,'');rel=P.filter(function(p){return p.nome===nm})}
+  var ex=INFO_CONS.filter(function(x){return a.t.indexOf(x[0])===0})[0];
+  infoOpen(esc(a.t),'<div>'+esc(a.x)+'</div>'+(ex?isec('Perch\u00e9 te lo segnalo')+'<div class="mu">'+esc(ex[1])+'</div>':'')+(rel.length?isec('Posizioni coinvolte')+pRows(byCap(rel),function(p){return [esc(eur(num(p.cap))),esc(p.piatt)]}):'')+'<div class="note">Sono spunti di ragionamento, non consulenza finanziaria personalizzata.</div>')
+}
+function iMov(id){
+  var m=S.mov.filter(function(x){return x.id===id})[0];if(!m)return;var p=m.da?findP(m.da):null,out=m.t==='out';
+  var cb=out&&m.cb?num(m.imp)*num(S.set.cashback)/100:0;
+  infoOpen(esc(m.nota||m.cat),irowS('Importo',(out?'\u2212':'+')+esc(eur2(num(m.imp))))+irowS('Data',esc(dt(m.d)))+irowS('Categoria',esc(m.cat))+(p?irowS('Pagata da',esc(p.nome)):'')+(cb>0?irowS('Cashback stimato',esc(eur2(cb)),num(S.set.cashback)+'% su questa spesa'):'')+
+   (num(m.lit)>0?irowS('Litri',esc(m.lit.toLocaleString('it-IT')))+irowS('Prezzo al litro',esc(eur2(num(m.imp)/m.lit)))+(num(m.km)>0?irowS('Km del contachilometri',esc(fmtInt(m.km))):'')+(m.nf?'<div class="note">Segnato come rifornimento non completo.</div>':''):'')+
+   (out?'<p><button class="dan" onclick="delMov(\''+esc(m.id)+'\');closeForm()">Elimina</button></p>':''))
+}
+function iSpese(){
+  var mo=ym(today()),M=S.mov.filter(function(m){return ym(m.d)===mo}),byC={},usc=0,ent=0;
+  M.forEach(function(m){if(m.t==='out'){usc+=num(m.imp);byC[m.cat]=(byC[m.cat]||0)+num(m.imp)}else ent+=num(m.imp)});
+  var fx=fisseMese(),gg=new Date().getDate();
+  S.fisse.forEach(function(f){byC[f.cat]=(byC[f.cat]||0)+(f.freq==='anno'?num(f.imp)/12:num(f.imp))});
+  var rows=Object.keys(byC).sort(function(a,b){return byC[b]-byC[a]}).map(function(k){return irowS(esc(k),esc(eur2(byC[k])))}).join('');
+  infoOpen('Uscite del mese',irowS('Spese registrate',esc(eur2(usc)),'in '+gg+(gg===1?' giorno':' giorni'))+irowS('Uscite fisse (mensili)',esc(eur2(fx)),'quelle annuali divise per 12')+irowS('Entrate registrate',esc(eur2(ent)))+irowS('Media spese al giorno',esc(eur2(usc/gg)))+(rows?isec('Per categoria')+rows:'')+'<div class="note">Le uscite fisse sono contate per intero ogni mese.</div>')
+}
 var openG=null;function togG(k){openG=(openG===k)?null:k;render()}
 function vPos(){
   var P=S.pos;
@@ -283,7 +373,7 @@ function vScad(){
   var h='';
   if(P.length){h+='<div class="mu" style="margin:6px 4px">Posizioni con scadenza</div>'+P.map(function(p){
     var T=yearsTo(p);var days=Math.round((new Date(p.scad).getTime()-Date.now())/864e5);var v=valueAt(p,T);
-    return '<div class="card"><div class="row"><b>'+esc(p.nome)+'</b><span class="mu">'+esc(p.piatt)+'</span></div>'+
+    return '<div class="card" style="cursor:pointer" onclick="fDett(\''+esc(p.id)+'\')"><div class="row"><b>'+esc(p.nome)+'</b><span class="mu">'+esc(p.piatt)+'</span></div>'+
      '<div class="row"><span>'+esc(dt(p.scad))+'</span><span class="mu">'+(days>=0?'tra '+days+' giorni':'scaduta')+'</span></div>'+
      '<div class="row"><span class="mu">Investito oggi</span><span>'+eur(num(p.cap))+'</span></div>'+
      '<div class="row"><span class="mu">Netto stimato a scadenza</span><b>'+eur(v.netto)+'</b></div>'+
@@ -333,7 +423,7 @@ function consigli(){
 }
 
 function vCons(){
-  var h=consigli().map(function(a){return '<div class="card alert '+a.c+'"><b>'+esc(a.t)+'</b>'+esc(a.x)+'</div>'}).join('');
+  var h=consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
   if(!S.pos.length)return '<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
@@ -527,7 +617,7 @@ function vSpese(){
   var fx=fisseMese(),tu=usc+fx;
   var cb=(sum(M,function(m){return m.t==='out'&&m.cb?num(m.imp):0})+sum(S.fisse,function(f){return f.piatt==='Trade Republic'?(f.freq==='anno'?num(f.imp)/12:num(f.imp)):0}))*num(S.set.cashback)/100;
   var h=bannerStip();
-  h+='<div class="hero"><div class="lab">Uscite del mese</div><div class="tot">'+esc(fmtInt(tu))+'<small>€</small></div><div class="pills">'+
+  h+='<div class="hero"><div class="lab">Uscite del mese</div><div class="tot" style="cursor:pointer" onclick="iSpese()">'+esc(fmtInt(tu))+'<small>€</small></div><div class="pills">'+
    '<span class="pill">'+esc(eur(usc))+' spese + '+esc(eur(fx))+' fisse</span>'+
    (ent>0?'<span class="pill g">entrate '+esc(eur(ent))+'</span><span class="pill '+(ent-tu>=0?'g':'')+'">resta '+esc(eur(ent-tu))+'</span>':'<span class="pill a">stipendio non ancora registrato</span>')+
    (cb>0?'<span class="pill a">cashback ~'+esc(eur2(cb))+'</span>':'')+'</div>'+
@@ -557,7 +647,7 @@ function vSpese(){
   if(st.length){h+='<div class="sechead"><h2>Giro dello stipendio</h2></div><div class="card">'+st.map(function(m){return '<div class="logr"><span><b>'+esc(dsh(m.d))+'</b> · '+esc(m.nota||'')+'</span><b class="posv">+'+esc(eur2(num(m.imp)))+'</b></div>'}).join('')+'</div>'}
   var L=S.mov.slice().sort(function(a,b){return a.d<b.d?1:(a.d>b.d?-1:0)}).slice(0,20);
   h+='<div class="sechead"><h2>Ultimi movimenti</h2></div><div class="card">'+(L.length?L.map(function(m){
-    return '<div class="logr"><span><b>'+esc(m.nota||m.cat)+'</b><br><span class="mu">'+esc(dsh(m.d))+' · '+esc(m.cat)+'</span></span><span>'+(m.t==='in'?'<b class="posv">+'+esc(eur2(num(m.imp)))+'</b>':'<b>−'+esc(eur2(num(m.imp)))+'</b> <button class="mini" style="margin:0 0 0 6px;padding:2px 9px" aria-label="Elimina" onclick="delMov(\''+esc(m.id)+'\')">×</button>')+'</span></div>'}).join(''):'<div class="mu">Nessun movimento registrato.</div>')+
+    return '<div class="logr" style="cursor:pointer" onclick="iMov(\''+esc(m.id)+'\')"><span><b>'+esc(m.nota||m.cat)+'</b><br><span class="mu">'+esc(dsh(m.d))+' · '+esc(m.cat)+'</span></span><span>'+(m.t==='in'?'<b class="posv">+'+esc(eur2(num(m.imp)))+'</b>':'<b>−'+esc(eur2(num(m.imp)))+'</b> <button class="mini" style="margin:0 0 0 6px;padding:2px 9px" aria-label="Elimina" onclick="event.stopPropagation();delMov(\''+esc(m.id)+'\')">×</button>')+'</span></div>'}).join(''):'<div class="mu">Nessun movimento registrato.</div>')+
    '<div class="note">Eliminando una spesa, la cifra torna sul saldo da cui era stata scalata.</div></div>';
   return h;
 }
@@ -803,6 +893,7 @@ function fDett(id){
       r('Pagato da',src?esc(src.nome):'non scalato da nessun saldo')+'</div>';
   }
   var net=cap*(tEff(p)-num(p.costi))/100*(1-num(p.tassa)/100)/12;
+  h+='<div class="card"><h2>Cos\'\u00e8 e come lo calcolo</h2><div class="mu">'+esc(INFO_TIPO[p.tipo]||'')+'</div>'+(num(p.tetto)>0?'<div class="mu" style="margin-top:8px">Tasso a livelli: '+esc(pc(num(p.tasso)))+' fino a '+esc(eur(num(p.tetto)))+', poi '+esc(pc(num(p.tassoOltre)))+'.</div>':'')+(num(p.qty)>0&&p.cg?'<div class="mu" style="margin-top:8px">Valore = '+esc(String(num(p.qty)))+' monete \u00d7 prezzo del giorno'+(p.px?' ('+esc(eur(p.px))+').':'.')+'</div>':'')+'</div>';
   h+=(num(p.intTot)>0?'<div class="card"><h2>Interessi accreditati dall\'app</h2>'+r('Totale da quando li segna',eur2(num(p.intTot)))+(accrues(p)&&ACC.indexOf(p.tipo)>=0?r('Oggi circa',eur2(num(p.cap)*tEff(p)/100/365*(p.tipo==='staking'?1:1-num(p.tassa)/100))):'')+'</div>':'')+'<div class="card"><h2>Rendimento ipotizzato</h2>'+r('Tasso lordo annuo',pc(num(p.tasso)))+(num(p.costi)?r('Costi annui',pc(num(p.costi))):'')+r('Tasse sul guadagno',pc(num(p.tassa)))+r('Crescita netta stimata al mese',eur2(net))+
     '<div class="note">'+(p.bloccato?'Vincolato fino alla scadenza. ':'')+(p.variabile?'Tasso variabile: può cambiare. ':'')+'Sono ipotesi tue, non garanzie.</div></div>';
   var T=yearsTo(p);
