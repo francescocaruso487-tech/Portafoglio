@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='1.7',APP_DATE='24 nov 2026';
+var APP_VERSION='1.8',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['1.8','Piani di accumulo automatici ogni mese, scheda Dettagli per ogni posizione e prossimi addebiti'],
  ['1.7','Spese: stipendio con il suo giro, uscite fisse, spese giornaliere, cashback e promemoria'],
  ['1.6','Importazione con un solo tocco da link'],
  ['1.5','Valore nominale come base per le tasse e importazione che aggiunge posizioni'],
@@ -257,9 +258,9 @@ function vPos(){
       var tp=TIPI[p.tipo]||TIPI.fermi;
       return '<div class="card pos" style="border-left:3px solid '+col(PCOL,p.piatt,0)+'" onclick="openForm(\''+esc(p.id)+'\')"><div class="row"><b>'+esc(p.nome)+'</b><b>'+eur(num(p.cap))+'</b></div>'+
        '<div class="mu">'+esc(tp.n)+' · tasso '+pc(num(p.tasso))+(num(p.pmt)?' · +'+eur(num(p.pmt))+'/mese':'')+'</div>'+
-       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(num(p.nom)>0?'<span class="tag">nominale '+esc(eur(num(p.nom)))+'</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
+       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(num(p.nom)>0?'<span class="tag">nominale '+esc(eur(num(p.nom)))+'</span>':'')+(num(p.pacGiorno)>=1&&num(p.pmt)>0?'<span class="tag">piano automatico il '+esc(p.pacGiorno)+' del mese</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
        (p.scad?'<span class="tag">scade '+esc(dt(p.scad))+'</span>':(num(p.orizz)?'<span class="tag">orizzonte '+esc(num(p.orizz))+' anni</span>':''))+'</div>'+
-       '<div class="acts"><button class="mini" onclick="event.stopPropagation();fSaldo(\''+esc(p.id)+'\')">Aggiorna saldo</button><button class="mini" onclick="event.stopPropagation();fSposta(\''+esc(p.id)+'\')">Sposta soldi</button>'+(p.scad||p.bloccato?'<button class="mini" onclick="event.stopPropagation();fRinnova(\''+esc(p.id)+'\')">Rinnova blocco</button>':'')+'</div></div>'}).join('');
+       '<div class="acts"><button class="mini" onclick="event.stopPropagation();fDett(\''+esc(p.id)+'\')">Dettagli</button><button class="mini" onclick="event.stopPropagation();fSaldo(\''+esc(p.id)+'\')">Aggiorna saldo</button><button class="mini" onclick="event.stopPropagation();fSposta(\''+esc(p.id)+'\')">Sposta soldi</button>'+(p.scad||p.bloccato?'<button class="mini" onclick="event.stopPropagation();fRinnova(\''+esc(p.id)+'\')">Rinnova blocco</button>':'')+'</div></div>'}).join('');
   }).join('');
 }
 
@@ -360,7 +361,7 @@ function go(t){tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
 
 function openForm(id){
   var p=id?S.pos.filter(function(x){return x.id===id})[0]:null;
-  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false};
+  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false,pacGiorno:'',pacDa:''};
   var opt=function(list,sel,lab){return list.map(function(k){var v=lab?k:k;return '<option value="'+esc(k)+'"'+(k===sel?' selected':'')+'>'+esc(lab?lab(k):k)+'</option>'}).join('')};
   var m=document.getElementById('modal');
   m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+(isNew?'Nuova posizione':'Modifica posizione')+'</h2>'+
@@ -371,6 +372,8 @@ function openForm(id){
   '<div class="two"><div><label>Scadenza (se c\'è)</label><input id="f_scad" type="date" value="'+esc(p.scad)+'"></div><div><label>Oppure orizzonte (anni)</label><input id="f_orizz" inputmode="decimal" value="'+esc(p.orizz)+'"></div></div>'+
   '<label>Valore nominale o versato (€, facoltativo): base su cui si pagano le tasse</label><input id="f_nom" inputmode="decimal" value="'+esc(p.nom==null?'':p.nom)+'">'+
   '<label>Versamento mensile (€, facoltativo)</label><input id="f_pmt" inputmode="decimal" value="'+esc(p.pmt)+'">'+
+  '<div class="two"><div><label>Giorno del versamento (1-31)</label><input id="f_pg" inputmode="numeric" value="'+esc(p.pacGiorno==null?'':p.pacGiorno)+'"></div><div><label>Pagato da</label><select id="f_pd"><option value="">Nessuno (non scalare)</option><option value="cash"'+(p.pacDa==='cash'?' selected':'')+'>Cash Trade Republic</option>'+S.pos.filter(function(x){return x.id!==p.id}).map(function(x){return '<option value="'+esc(x.id)+'"'+(p.pacDa===x.id?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div></div>'+
+  '<div class="note">Con giorno e conto di pagamento, ogni mese l\'app aggiunge il versamento alla posizione e lo toglie dal conto, da sola.</div>'+
   '<div class="chk"><input type="checkbox" id="f_var"'+(p.variabile?' checked':'')+'><span>Tasso variabile</span></div>'+
   '<div class="chk"><input type="checkbox" id="f_blk"'+(p.bloccato?' checked':'')+'><span>Vincolato (non posso ritirarlo prima della scadenza)</span></div>'+
   '<div class="note">Per ETF e cripto il rendimento è un\'ipotesi tua (anche 0). Per i buoni usa il rendimento medio annuo che ti interessa.</div>'+
@@ -385,7 +388,7 @@ function saveForm(id,isNew){
   var g=function(k){return document.getElementById(k).value};
   var nome=g('f_nome').trim();if(!nome){document.getElementById('f_nome').focus();return}
   var o={id:id,nome:nome,piatt:g('f_piatt'),tipo:g('f_tipo'),cap:num(g('f_cap')),tasso:num(g('f_tasso')),tassa:num(g('f_tassa')),costi:num(g('f_costi')),
-   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:new Date().toISOString().slice(0,10)};
+   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||''};
   if(isNew)S.pos.push(o);else S.pos=S.pos.map(function(x){return x.id===id?o:x});
   save();closeForm();render();
 }
@@ -414,10 +417,10 @@ function doDownload(){
   try{var b=new Blob([backupText()],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='portafoglio-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);msg.textContent='Backup scaricato.'}catch(e){msg.textContent='Download non riuscito: usa "Copia testo".'}
 }
 function doFile(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(){document.getElementById('imp').value=String(r.result);doImport()};r.readAsText(f)}
-function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today()}}
+function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today(),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':Math.min(31,Math.max(1,Math.round(num(p.pacGiorno)))),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||'')}}
 function addPositions(arr){
-  var n=0,sk=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.some(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)});if(dup){sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
-  if(n)save();return {n:n,sk:sk};
+  var n=0,sk=0,up=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.filter(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)})[0];if(dup){if(c.pacGiorno!==''&&dup.pacGiorno!==c.pacGiorno){dup.pacGiorno=c.pacGiorno;dup.pacDa=c.pacDa;dup.pacUlt=dup.pacUlt||c.pacUlt;up++}else sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
+  if(n||up)save();return {n:n,sk:sk,up:up};
 }
 function doAdd(){
   var msg=document.getElementById('addMsg');
@@ -431,16 +434,16 @@ function importFromHash(){
   try{var b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
     var o=JSON.parse(decodeURIComponent(escape(atob(b))));if(!o||typeof o!=='object')throw 0;
     var arr=Array.isArray(o)?o:(Array.isArray(o.pos)?o.pos:[]),fx=(!Array.isArray(o)&&Array.isArray(o.fisse))?o.fisse:[];
-    var r=addPositions(arr),rf=addFisse(fx);tab=(rf.n&&!r.n)?'spese':'pos';render();
-    var pt=[];if(r.n)pt.push(r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push(rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));
-    toast(pt.length?('Aggiunte '+pt.join(' e ')+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
+    var r=addPositions(arr),rf=addFisse(fx);runPac();tab=(rf.n&&!r.n)?'spese':'pos';render();
+    var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
+    var tx=pt.join(', ');toast(pt.length?(tx.charAt(0).toUpperCase()+tx.slice(1)+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
   }catch(e){toast('Link di importazione non valido.')}
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){location.hash=''}
 }
 function doImport(){
   var msg=document.getElementById('bkMsg');
   try{var o=JSON.parse(document.getElementById('imp').value);if(!o||!Array.isArray(o.pos))throw 0;
-    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||'')}});
+    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||''),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':num(p.pacGiorno),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||'')}});
     o.set=o.set||{};o.set.target=o.set.target||{};o.set.maxPiatt=num(o.set.maxPiatt)||60;o.set.maxCripto=num(o.set.maxCripto)||15;o.set.minIdle=o.set.minIdle==null?500:num(o.set.minIdle);
     S=o;normalize();save();render();
   }catch(e){msg.textContent='Backup non valido.'}
@@ -509,6 +512,7 @@ function vSpese(){
   if(!S.mov.some(function(m){return m.d===today()&&m.t==='out'})&&!S.nos[today()]){
     h+='<div class="card alert"><b>Oggi non hai registrato spese</b>Hai speso qualcosa?<div class="acts"><button class="mini" onclick="fSpesa()">Registra una spesa</button><button class="mini" onclick="noSpese()">Oggi non ho speso</button></div></div>';
   }
+  h+=proxCard();
   if(tu>0){
     var byC={};M.forEach(function(m){if(m.t==='out')byC[m.cat]=(byC[m.cat]||0)+num(m.imp)});
     S.fisse.forEach(function(f){var v=f.freq==='anno'?num(f.imp)/12:num(f.imp);byC[f.cat]=(byC[f.cat]||0)+v});
@@ -609,6 +613,79 @@ function addFisse(arr){
   if(n)save();return {n:n,sk:sk};
 }
 
+/* ===== piani di accumulo automatici e dettagli ===== */
+function pad(n){return (n<10?'0':'')+n}
+function pmonthLen(y,m){return new Date(y,m+1,0).getDate()}
+function pacKey(y,m){while(m<0){m+=12;y--}while(m>11){m-=12;y++}return y+'-'+pad(m+1)}
+function nextOcc(g){
+  var n=new Date(),y=n.getFullYear(),m=n.getMonth(),t=today();
+  var cand=function(y,m){return y+'-'+pad(m+1)+'-'+pad(Math.min(g,pmonthLen(y,m)))};
+  var c=cand(y,m);if(c<t){m++;if(m>11){m=0;y++}c=cand(y,m)}return c;
+}
+function pacSrc(p){return p.pacDa==='cash'?cashPos():(p.pacDa?findP(p.pacDa):null)}
+function runPac(){
+  var now=new Date(),ty=now.getFullYear(),tm=now.getMonth(),td=now.getDate(),changed=false,msgs=[];
+  S.pos.forEach(function(p){
+    var g=num(p.pacGiorno),pm=num(p.pmt);if(!(pm>0&&g>=1))return;
+    var dueNow=td>=Math.min(g,pmonthLen(ty,tm));
+    if(!p.pacUlt){p.pacUlt=dueNow?pacKey(ty,tm):pacKey(ty,tm-1);changed=true;return}
+    var y=+p.pacUlt.slice(0,4),m=+p.pacUlt.slice(5,7)-1;
+    for(var guard=0;guard<36;guard++){
+      m++;if(m>11){m=0;y++}
+      if(y>ty||(y===ty&&m>tm))break;
+      if(y===ty&&m===tm&&!dueNow)break;
+      p.cap=r2(num(p.cap)+pm);if(num(p.nom)>0)p.nom=r2(num(p.nom)+pm);p.agg=today();
+      var src=pacSrc(p),low=false;
+      if(src&&src.id!==p.id){low=num(src.cap)<pm;src.cap=Math.max(0,r2(num(src.cap)-pm));src.agg=today()}
+      p.pacUlt=pacKey(y,m);changed=true;
+      logOp('Piano '+p.nome+': +'+eur2(pm)+(src?' da '+src.nome:'')+(low?' (saldo insufficiente: controlla)':''));
+      msgs.push(p.nome);
+    }
+  });
+  if(changed)save();
+  if(msgs.length)toast('Piani di accumulo eseguiti: '+msgs.length+(msgs.length===1?' versamento':' versamenti')+'. Controlla il saldo del cash.');
+  return msgs.length;
+}
+function proxCard(){
+  var ev=[];
+  S.pos.forEach(function(p){var g=num(p.pacGiorno);if(num(p.pmt)>0&&g>=1)ev.push({d:nextOcc(g),n:p.nome,a:num(p.pmt),k:'Piano di accumulo'})});
+  S.fisse.forEach(function(f){var g=num(f.giorno);if(g>=1&&f.freq!=='anno')ev.push({d:nextOcc(g),n:f.nome,a:num(f.imp),k:'Uscita fissa'})});
+  if(!ev.length)return '';
+  ev.sort(function(a,b){return a.d<b.d?-1:(a.d>b.d?1:0)});
+  var plans=sum(S.pos,function(p){return num(p.pacGiorno)>=1?num(p.pmt):0});
+  return '<div class="sechead"><h2>Prossimi addebiti automatici</h2></div><div class="card" style="padding:4px 14px">'+ev.slice(0,12).map(function(e){
+    return '<div class="sc"><div class="t"><b>'+esc(e.n)+'</b><span class="mu">'+esc(e.k)+'</span></div><span class="d">'+esc(dsh(e.d))+'</span><b>'+esc(eur2(e.a))+'</b></div>'}).join('')+
+    (plans>0?'<div class="row" style="padding:10px 0 6px"><span class="mu">Piani di accumulo al mese</span><b>'+eur2(plans)+'</b></div><div class="note" style="margin:0 0 10px">I piani non sono spese: spostano i soldi dal cash agli investimenti. L\'app li applica da sola alla data indicata.</div>':'')+'</div>';
+}
+function fDett(id){
+  var p=findP(id);if(!p)return;var tp=TIPI[p.tipo]||TIPI.fermi;
+  var cap=num(p.cap),nom=num(p.nom),pm=num(p.pmt),g=num(p.pacGiorno);
+  var r=function(a,b){return '<div class="row"><span class="mu">'+a+'</span><b>'+b+'</b></div>'};
+  var h='<div class="mu">'+esc(p.piatt)+' · '+esc(tp.n)+'</div><div class="card">';
+  h+=r('Valore oggi',eur2(cap));
+  if(nom>0){
+    if(p.tipo==='buono')h+=r('Valore nominale',eur2(nom));
+    else h+=r('Versato finora',eur2(nom))+r('Guadagno o perdita',(cap-nom>=0?'+':'')+eur2(cap-nom)+' ('+pc((cap/nom-1)*100)+')');
+  }
+  h+='</div>';
+  if(pm>0){
+    var src=pacSrc(p);
+    h+='<div class="card"><h2>Versamento automatico</h2>'+r('Importo',eur2(pm)+' al mese')+
+      (g>=1?r('Giorno',g+' del mese')+r('Prossimo',dt(nextOcc(g))):'<div class="note">Imposta il giorno in Modifica per renderlo automatico.</div>')+
+      r('Pagato da',src?esc(src.nome):'non scalato da nessun saldo')+'</div>';
+  }
+  var net=cap*(num(p.tasso)-num(p.costi))/100*(1-num(p.tassa)/100)/12;
+  h+='<div class="card"><h2>Rendimento ipotizzato</h2>'+r('Tasso lordo annuo',pc(num(p.tasso)))+(num(p.costi)?r('Costi annui',pc(num(p.costi))):'')+r('Tasse sul guadagno',pc(num(p.tassa)))+r('Crescita netta stimata al mese',eur2(net))+
+    '<div class="note">'+(p.bloccato?'Vincolato fino alla scadenza. ':'')+(p.variabile?'Tasso variabile: può cambiare. ':'')+'Sono ipotesi tue, non garanzie.</div></div>';
+  var T=yearsTo(p);
+  if(p.scad){var v=valueAt(p,T);h+='<div class="card"><h2>A scadenza</h2>'+r('Scadenza',esc(dt(p.scad)))+r('Netto stimato',eur2(v.netto))+r('Guadagno netto stimato',eur2(v.netto-v.inv))+'</div>'}
+  else{
+    var rows=[1,5,10,20].filter(function(y){return T==null||y<=T}).map(function(y){var v=valueAt(p,y);return r('Tra '+y+(y===1?' anno':' anni'),eur2(v.netto)+' <span class="mu">(versati '+esc(eur2(v.inv))+')</span>')}).join('');
+    if(rows)h+='<div class="card"><h2>Previsione netta</h2>'+rows+'</div>';
+  }
+  sheetOpen(esc(p.nome),h+'<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="openForm(\''+esc(p.id)+'\')">Modifica</button><button class="sec" onclick="closeForm()">Chiudi</button></p>');
+}
+
 /* ===== riepilogo per Claude ===== */
 function promptText(){
   var data={oggi:today(),posizioni:S.pos.map(function(p){return {nome:p.nome,piattaforma:p.piatt,tipo:(TIPI[p.tipo]||{}).n,capitale:num(p.cap),tasso_lordo:num(p.tasso),tasse:num(p.tassa),costi:num(p.costi),scadenza:p.scad||null,orizzonte_anni:p.orizz||null,versamento_mensile:num(p.pmt),variabile:!!p.variabile,vincolato:!!p.bloccato}}),uscite_fisse:S.fisse.map(function(f){return {nome:f.nome,importo:num(f.imp),frequenza:f.freq,categoria:f.cat,piattaforma:f.piatt}}),obiettivi:S.set.target,soglie:{piattaforma:S.set.maxPiatt,cripto:S.set.maxCripto}};
@@ -619,7 +696,8 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();render();importFromHash();
+load();runPac();render();importFromHash();
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&runPac())render()});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 </script>
