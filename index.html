@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.1',APP_DATE='24 nov 2026';
+var APP_VERSION='2.2',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.2','Abitudini di spesa (tabacco, carburante...): un tocco per registrarle quando succedono e avviso se passa troppo tempo'],
  ['2.1','Interessi automatici ogni giorno su conti, cash e staking, con il totale maturato e la stima al giorno'],
  ['2.0','Tetto del tasso alto (es. Revolut 3.000 \u20ac): rendimento calcolato a livelli e avviso per spostare il sovrappi\u00f9 su Trade Republic'],
  ['1.9','Sezioni a tendina per piattaforma e prezzi delle cripto aggiornati in automatico (quantit\u00e0 \u00d7 prezzo del giorno)'],
@@ -129,7 +130,7 @@ var TIPI={
 };
 var CLASSI=['Sicuri','Azionario','Cripto','Liquidità ferma'];
 var PIATT=['Poste Italiane','Trade Republic','Revolut','Crypto.com','Intesa Sanpaolo','Altro'];
-var S={pos:[],set:{maxPiatt:60,maxCripto:15,minIdle:500,cashback:1,target:{}},log:[],mov:[],fisse:[],nos:{}};
+var S={ric:[],pos:[],set:{maxPiatt:60,maxCripto:15,minIdle:500,cashback:1,target:{}},log:[],mov:[],fisse:[],nos:{}};
 var tab='quadro';
 
 function num(x){var n=parseFloat(String(x).replace(',','.'));return isFinite(n)?n:0}
@@ -165,7 +166,7 @@ function normalize(){
   S.set=S.set||{};S.set.target=S.set.target||{};
   if(S.set.maxPiatt==null)S.set.maxPiatt=60;if(S.set.maxCripto==null)S.set.maxCripto=15;if(S.set.minIdle==null)S.set.minIdle=500;
   if(S.set.cashback==null)S.set.cashback=1;
-  if(!Array.isArray(S.log))S.log=[];if(!Array.isArray(S.mov))S.mov=[];if(!Array.isArray(S.fisse))S.fisse=[];if(!S.nos||typeof S.nos!=='object')S.nos={};
+  if(!Array.isArray(S.log))S.log=[];if(!Array.isArray(S.mov))S.mov=[];if(!Array.isArray(S.fisse))S.fisse=[];if(!S.nos||typeof S.nos!=='object')S.nos={};if(!Array.isArray(S.ric))S.ric=[];
 }
 function load(){
   try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.pos))S=o}}catch(e){}
@@ -444,8 +445,8 @@ function importFromHash(){
   try{var b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
     var o=JSON.parse(decodeURIComponent(escape(atob(b))));if(!o||typeof o!=='object')throw 0;
     var arr=Array.isArray(o)?o:(Array.isArray(o.pos)?o.pos:[]),fx=(!Array.isArray(o)&&Array.isArray(o.fisse))?o.fisse:[];
-    var r=addPositions(arr),rf=addFisse(fx);runPac();setTimeout(function(){refreshPrezzi(true)},300);tab=(rf.n&&!r.n)?'spese':'pos';render();
-    var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
+    var rc=(!Array.isArray(o)&&Array.isArray(o.ric))?addRic(o.ric):0;var r=addPositions(arr),rf=addFisse(fx);runPac();setTimeout(function(){refreshPrezzi(true)},300);tab=((rf.n||rc)&&!r.n)?'spese':'pos';render();
+    var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(rc)pt.push('aggiunte '+rc+(rc===1?' abitudine di spesa':' abitudini di spesa'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
     var tx=pt.join(', ');toast(pt.length?(tx.charAt(0).toUpperCase()+tx.slice(1)+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
   }catch(e){toast('Link di importazione non valido.')}
   try{history.replaceState(null,'',location.pathname+location.search)}catch(e){location.hash=''}
@@ -522,6 +523,7 @@ function vSpese(){
   if(!S.mov.some(function(m){return m.d===today()&&m.t==='out'})&&!S.nos[today()]){
     h+='<div class="card alert"><b>Oggi non hai registrato spese</b>Hai speso qualcosa?<div class="acts"><button class="mini" onclick="fSpesa()">Registra una spesa</button><button class="mini" onclick="noSpese()">Oggi non ho speso</button></div></div>';
   }
+  h+=abitCard();
   h+=proxCard();
   if(tu>0){
     var byC={};M.forEach(function(m){if(m.t==='out')byC[m.cat]=(byC[m.cat]||0)+num(m.imp)});
@@ -547,12 +549,32 @@ function vSpese(){
   return h;
 }
 function noSpese(){S.nos[today()]=1;save();render()}
-function fSpesa(){
+function ultimaSpesa(cat){var d='';S.mov.forEach(function(m){if(m.t==='out'&&m.cat===cat&&m.d>d)d=m.d});return d}
+function abitCard(){
+  var R=S.ric||[];var h='<div class="sechead"><h2>Abitudini</h2></div><div class="card">';
+  if(!R.length)h+='<div class="mu">Aggiungi le spese che fai ogni tanto, come tabacco o carburante: le registri con un tocco quando succedono.</div>';
+  R.forEach(function(r){
+    var u=ultimaSpesa(r.cat),gg=u?dnum(today())-dnum(u):null,late=gg==null||gg>=num(r.ogni);
+    h+='<div class="row" style="padding:8px 0"><div><b>'+esc(r.nome)+'</b><div class="mu" style="font-size:12px">'+(gg==null?'mai registrata':(gg===0?'oggi':'ultima '+gg+(gg===1?' giorno fa':' giorni fa')))+' \u00b7 di solito ogni '+esc(num(r.ogni))+' giorni'+(late&&gg!=null?' \u00b7 <span style="color:var(--ok)">\u00e8 ora</span>':'')+'</div></div><span><button class="mini" onclick="fSpesa({cat:\''+esc(r.cat)+'\',nota:\''+esc(r.nome).replace(/'/g,'')+'\',imp:\''+esc(r.imp||'')+'\'})">Registra</button> <button class="mini" onclick="fRic(\''+esc(r.id)+'\')">\u270e</button></span></div>'});
+  return h+'<div class="acts"><button class="mini" onclick="fRic()">+ Nuova abitudine</button></div></div>';
+}
+function fRic(id){
+  var r=id?S.ric.filter(function(x){return x.id===id})[0]:null;r=r||{nome:'',cat:'Altro',ogni:7,imp:''};
+  sheetOpen(id?'Modifica abitudine':'Nuova abitudine','<label>Nome</label><input id="r_n" value="'+esc(r.nome)+'" placeholder="es. Tabacco">'+
+   '<label>Categoria</label><select id="r_c">'+CAT.map(function(c){return '<option'+(c===r.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'+
+   '<div class="two"><div><label>Di solito ogni (giorni)</label><input id="r_o" inputmode="numeric" value="'+esc(r.ogni)+'"></div><div><label>Importo tipico (\u20ac, facoltativo)</label><input id="r_i" inputmode="decimal" value="'+esc(r.imp||'')+'"></div></div>'+
+   '<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="saveRic(\''+(id?esc(id):'')+'\')">Salva</button><button class="sec" onclick="closeForm()">Annulla</button>'+(id?'<button class="dan" onclick="delRic(\''+esc(id)+'\')">Elimina</button>':'')+'</p>')}
+function saveRic(id){var n=g_('r_n').trim();if(!n){document.getElementById('r_n').focus();return}
+  var o={id:id||uid(),nome:n,cat:g_('r_c'),ogni:Math.max(1,Math.round(num(g_('r_o')))||7),imp:g_('r_i')===''?'':num(g_('r_i'))};
+  if(id)S.ric=S.ric.map(function(x){return x.id===id?o:x});else S.ric.push(o);save();closeForm();render()}
+function delRic(id){S.ric=S.ric.filter(function(x){return x.id!==id});save();closeForm();render()}
+function addRic(arr){var n=0;arr.forEach(function(x){var nome=String(x.nome||'').trim();if(!nome||S.ric.some(function(q){return q.nome===nome}))return;S.ric.push({id:uid(),nome:nome,cat:CAT.indexOf(x.cat)>=0?x.cat:'Altro',ogni:Math.max(1,Math.round(num(x.ogni))||7),imp:x.imp===''||x.imp==null?'':num(x.imp)});n++});if(n)save();return n}
+function fSpesa(pre){pre=pre||{};
   var cp=cashPos();var opts=S.pos.filter(function(p){return p.tipo==='conto'||p.tipo==='fermi'});
   var sel='<select id="s_da"><option value="">Contanti o altro (non scalare)</option>'+opts.map(function(p){return '<option value="'+esc(p.id)+'"'+(cp&&p.id===cp.id?' selected':'')+'>'+esc(p.nome)+' ('+esc(eur(num(p.cap)))+')</option>'}).join('')+'</select>';
-  sheetOpen('Nuova spesa','<label>Importo (€)</label><input id="s_imp" inputmode="decimal" placeholder="0">'+
-   '<label>Categoria</label><select id="s_cat">'+CAT.map(function(c){return '<option>'+esc(c)+'</option>'}).join('')+'</select>'+
-   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno">'+
+  sheetOpen('Nuova spesa','<label>Importo (€)</label><input id="s_imp" inputmode="decimal" placeholder="0" value="'+esc(pre.imp||'')+'">'+
+   '<label>Categoria</label><select id="s_cat">'+CAT.map(function(c){return '<option'+(c===pre.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'+
+   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+
    '<label>Data</label><input id="s_d" type="date" value="'+today()+'">'+
    '<label>Pagata da</label>'+sel+
    '<div class="note">Il saldo scelto viene scalato. Con il cash Trade Republic il cashback è calcolato in automatico.</div>'+btns('doSpesa()','Salva'));
