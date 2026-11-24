@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.4',APP_DATE='24 nov 2026';
+var APP_VERSION='2.5',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.5','Carburante: puoi segnare un rifornimento non completo, che non falsa consumi e autonomia'],
  ['2.4','Carburante: litri, importo e km a ogni pieno, con prezzo al litro, consumo e km per pieno'],
  ['2.3','Le uscite fisse scalano da sole il saldo del conto nel giorno di addebito e contano nel cashback'],
  ['2.2','Abitudini di spesa (tabacco, carburante...): un tocco per registrarle quando succedono e avviso se passa troppo tempo'],
@@ -557,7 +558,7 @@ function carbCard(){
   var F=S.mov.filter(function(m){return m.cat==='Carburante'&&num(m.lit)>0}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0});
   if(!F.length)return '';
   var serb=num(S.set.serb)||40,L=0,D=0,E=0,dist=[];
-  for(var i=1;i<F.length;i++){var a=F[i-1],b=F[i];if(num(a.km)>0&&num(b.km)>num(a.km)){var dd=num(b.km)-num(a.km);L+=num(b.lit);D+=dd;E+=num(b.imp);dist.push(dd)}}
+  for(var i=1;i<F.length;i++){var a=F[i-1],b=F[i];if(!a.nf&&!b.nf&&num(a.km)>0&&num(b.km)>num(a.km)){var dd=num(b.km)-num(a.km);L+=num(b.lit);D+=dd;E+=num(b.imp);dist.push(dd)}}
   var tl=sum(F,function(m){return num(m.lit)}),te=sum(F,function(m){return num(m.imp)});
   var row=function(a,b){return '<div class="row"><span class="mu">'+a+'</span><b>'+b+'</b></div>'};
   var h='<div class="sechead"><h2>Carburante</h2></div><div class="card">'+row('Ultimo pieno',esc(eur2(num(F[F.length-1].imp)))+' \u00b7 '+esc(F[F.length-1].lit.toLocaleString('it-IT'))+' L')+row('Prezzo medio al litro',esc(eur2(te/tl)));
@@ -589,7 +590,7 @@ function fSpesa(pre){pre=pre||{};
   var sel='<select id="s_da"><option value="">Contanti o altro (non scalare)</option>'+opts.map(function(p){return '<option value="'+esc(p.id)+'"'+(cp&&p.id===cp.id?' selected':'')+'>'+esc(p.nome)+' ('+esc(eur(num(p.cap)))+')</option>'}).join('')+'</select>';
   sheetOpen('Nuova spesa','<label>Importo (€)</label><input id="s_imp" inputmode="decimal" placeholder="0" value="'+esc(pre.imp||'')+'">'+
    '<label>Categoria</label><select id="s_cat">'+CAT.map(function(c){return '<option'+(c===pre.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'+
-   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+(pre.carb?'<div class="two"><div><label>Litri messi</label><input id="s_lit" inputmode="decimal" placeholder="0"></div><div><label>Km totali (contachilometri)</label><input id="s_km" inputmode="numeric" placeholder="'+esc(ultKm()||'')+'"></div></div><div class="note">Con il pieno ogni volta, litri e km ti danno consumo e km per pieno. I km sono facoltativi.</div>':'')+
+   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+(pre.carb?'<div class="two"><div><label>Litri messi</label><input id="s_lit" inputmode="decimal" placeholder="0"></div><div><label>Km totali (contachilometri)</label><input id="s_km" inputmode="numeric" placeholder="'+esc(ultKm()||'')+'"></div></div><div class="chk"><input type="checkbox" id="s_nf"><span>Non ho fatto il pieno completo</span></div><div class="note">Con il pieno ogni volta, litri e km ti danno consumo e km per pieno, qualunque sia il carburante rimasto prima. I km sono facoltativi.</div>':'')+
    '<label>Data</label><input id="s_d" type="date" value="'+today()+'">'+
    '<label>Pagata da</label>'+sel+
    '<div class="note">Il saldo scelto viene scalato. Con il cash Trade Republic il cashback è calcolato in automatico.</div>'+btns('doSpesa()','Salva'));
@@ -597,7 +598,7 @@ function fSpesa(pre){pre=pre||{};
 function doSpesa(){
   var imp=num(g_('s_imp'));if(imp<=0){document.getElementById('s_imp').focus();return}
   var d=g_('s_d')||today(),da=g_('s_da'),p=da?findP(da):null;
-  var mv={id:uid(),d:d,t:'out',imp:r2(imp),cat:g_('s_cat'),nota:g_('s_nota').trim(),da:p?p.id:'',cb:!!(p&&p.piatt==='Trade Republic')};var le=document.getElementById('s_lit');if(le&&num(le.value)>0){mv.lit=num(le.value);var ke=num(g_('s_km'));if(ke>0)mv.km=ke}S.mov.push(mv);
+  var mv={id:uid(),d:d,t:'out',imp:r2(imp),cat:g_('s_cat'),nota:g_('s_nota').trim(),da:p?p.id:'',cb:!!(p&&p.piatt==='Trade Republic')};var le=document.getElementById('s_lit');if(le&&num(le.value)>0){mv.lit=num(le.value);var ke=num(g_('s_km'));if(ke>0)mv.km=ke;if(document.getElementById('s_nf').checked)mv.nf=true}S.mov.push(mv);
   if(p){p.cap=Math.max(0,r2(num(p.cap)-imp));p.agg=today()}
   if(d===today())delete S.nos[d];
   save();closeForm();render();
