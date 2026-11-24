@@ -206,7 +206,7 @@ function bucket(p){var T=yearsTo(p);if(T==null)return 'Senza scadenza';if(T<1)re
 
 function vQuadro(){
   var P=S.pos;
-  if(!P.length)return '<div class="card empty">Ancora nessuna posizione.<br><br><button class="pri" onclick="openForm()">Aggiungi la prima</button><br><br><button class="sec" onclick="demo()">Carica dati di esempio</button></div>';
+  if(!P.length)return '<div class="card empty">Ancora nessuna posizione.<br><br><button class="pri" onclick="openForm()">Aggiungi la prima</button></div>';
   var tot=sum(P,function(p){return num(p.cap)});
   var byP={},byT={},byC={},byH={},cnt={},rt={};
   P.forEach(function(p){var c=num(p.cap);var t=TIPI[p.tipo]||TIPI.fermi;
@@ -233,7 +233,7 @@ function vQuadro(){
 
 function vPos(){
   var P=S.pos;
-  if(!P.length)return '<div class="card empty">Nessuna posizione.<br><br><button class="sec" onclick="demo()">Carica dati di esempio</button></div>';
+  if(!P.length)return '<div class="card empty">Nessuna posizione.<br><br><button class="pri" onclick="openForm()">Aggiungi la prima</button></div>';
   var g={};P.forEach(function(p){(g[p.piatt]=g[p.piatt]||[]).push(p)});
   return '<div style="margin:6px 2px"><button class="sec" onclick="fSposta()">\u21c4 Sposta soldi tra posizioni</button></div>'+Object.keys(g).map(function(k){
     var t=sum(g[k],function(p){return num(p.cap)});
@@ -250,7 +250,7 @@ function vPos(){
 function vScad(){
   var P=S.pos.filter(function(p){return p.scad}).sort(function(a,b){return a.scad<b.scad?-1:1});
   var Q=S.pos.filter(function(p){return !p.scad});
-  if(!S.pos.length)return '<div class="card empty">Nessuna posizione.</div>';
+  if(!S.pos.length)return '<div class="card empty">Nessuna posizione.<br><br><button class="pri" onclick="openForm()">Aggiungi la prima</button></div>';
   var h='';
   if(P.length){h+='<div class="mu" style="margin:6px 4px">Posizioni con scadenza</div>'+P.map(function(p){
     var T=yearsTo(p);var days=Math.round((new Date(p.scad).getTime()-Date.now())/864e5);var v=valueAt(p,T);
@@ -333,18 +333,6 @@ function render(){
 }
 function addFab(){if(document.getElementById('fab'))return;var b=document.createElement('button');b.id='fab';b.className='pri fab';b.textContent='+ Aggiungi';b.onclick=function(){openForm()};document.body.appendChild(b)}
 function go(t){tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
-
-function demo(){
-  var d=function(y){var x=new Date();x.setFullYear(x.getFullYear()+y);return x.toISOString().slice(0,10)};var n=new Date().toISOString().slice(0,10);
-  S.pos=[
-   {id:uid(),nome:'Buono postale (esempio)',piatt:'Poste Italiane',tipo:'buono',cap:3000,tasso:3,tassa:12.5,costi:0,scad:d(4),orizz:'',pmt:0,variabile:false,bloccato:true,agg:n},
-   {id:uid(),nome:'Portafoglio 2,5% (esempio)',piatt:'Trade Republic',tipo:'conto',cap:2000,tasso:2.5,tassa:26,costi:0,scad:'',orizz:'',pmt:0,variabile:true,bloccato:false,agg:n},
-   {id:uid(),nome:'ETF globale PAC (esempio)',piatt:'Trade Republic',tipo:'etf',cap:5000,tasso:5,tassa:26,costi:0.2,scad:'',orizz:20,pmt:100,variabile:false,bloccato:false,agg:n},
-   {id:uid(),nome:'Bitcoin (esempio)',piatt:'Trade Republic',tipo:'cripto',cap:1000,tasso:0,tassa:26,costi:0,scad:'',orizz:10,pmt:0,variabile:false,bloccato:false,agg:n},
-   {id:uid(),nome:'Cronos staking (esempio)',piatt:'Crypto.com',tipo:'staking',cap:500,tasso:6,tassa:26,costi:0,scad:'',orizz:'',pmt:0,variabile:true,bloccato:false,agg:n},
-   {id:uid(),nome:'Conto corrente (esempio)',piatt:'Intesa Sanpaolo',tipo:'fermi',cap:4000,tasso:0,tassa:0,costi:0,scad:'',orizz:'',pmt:0,variabile:false,bloccato:false,agg:n}];
-  save();render();
-}
 
 function openForm(id){
   var p=id?S.pos.filter(function(x){return x.id===id})[0]:null;
