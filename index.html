@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.7',APP_DATE='24 nov 2026';
+var APP_VERSION='2.8',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.8','Cripto con prezzo automatico: i piani mensili aumentano anche la quantit\u00e0, cos\u00ec il valore resta corretto'],
  ['2.7','Tasto indietro: chiude la schermata aperta, poi torna alla scheda precedente, fino alla home'],
  ['2.6','Uscite fisse annuali con il loro mese: compaiono nei prossimi addebiti e scalano il saldo il giorno giusto'],
  ['2.5','Carburante: puoi segnare un rifornimento non completo, che non falsa consumi e autonomia'],
@@ -458,7 +459,7 @@ function importFromHash(){
     var o=JSON.parse(decodeURIComponent(escape(atob(b))));if(!o||typeof o!=='object')throw 0;
     var arr=Array.isArray(o)?o:(Array.isArray(o.pos)?o.pos:[]),fx=(!Array.isArray(o)&&Array.isArray(o.fisse))?o.fisse:[];
     var rc=(!Array.isArray(o)&&Array.isArray(o.ric))?addRic(o.ric):0;var r=addPositions(arr),rf=addFisse(fx);runFisse();runPac();setTimeout(function(){refreshPrezzi(true)},300);tab=((rf.n||rc)&&!r.n)?'spese':'pos';render();
-    var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(rc)pt.push('aggiunte '+rc+(rc===1?' abitudine di spesa':' abitudini di spesa'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
+    var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(rc)pt.push('aggiunte '+rc+(rc===1?' abitudine di spesa':' abitudini di spesa'));if(r.up)pt.push('aggiornate '+r.up+(r.up===1?' posizione':' posizioni'));
     var tx=pt.join(', ');toast(pt.length?(tx.charAt(0).toUpperCase()+tx.slice(1)+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
   }catch(e){toast('Link di importazione non valido.')}
   try{history.replaceState({tab:tab},'',location.pathname+location.search)}catch(e){location.hash=''}
@@ -761,7 +762,7 @@ function runPac(){
       m++;if(m>11){m=0;y++}
       if(y>ty||(y===ty&&m>tm))break;
       if(y===ty&&m===tm&&!dueNow)break;
-      p.cap=r2(num(p.cap)+pm);if(num(p.nom)>0)p.nom=r2(num(p.nom)+pm);p.agg=today();
+      p.cap=r2(num(p.cap)+pm);if(num(p.qty)>0&&p.cg&&num(p.px)>0)p.qty=Math.round((num(p.qty)+pm/num(p.px))*1e8)/1e8;if(num(p.nom)>0)p.nom=r2(num(p.nom)+pm);p.agg=today();
       var src=pacSrc(p),low=false;
       if(src&&src.id!==p.id){low=num(src.cap)<pm;src.cap=Math.max(0,r2(num(src.cap)-pm));src.agg=today()}
       p.pacUlt=pacKey(y,m);changed=true;
