@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.9',APP_DATE='24 nov 2026';
+var APP_VERSION='3.0',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['3.0','Nuova funzione "Dove li metto?" in Consigli: scegli importo, durata e rischio e ti mostra dove rende di pi\u00f9 al netto, anche fuori dalle tue piattaforme'],
  ['2.9','Tocca qualsiasi numero, piattaforma, avviso o spesa per un pop-up con i dettagli e il calcolo'],
  ['2.8','Cripto con prezzo automatico: i piani mensili aumentano anche la quantit\u00e0, cos\u00ec il valore resta corretto'],
  ['2.7','Tasto indietro: chiude la schermata aperta, poi torna alla scheda precedente, fino alla home'],
@@ -423,10 +424,99 @@ function consigli(){
 }
 
 function vCons(){
-  var h=consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
-  if(!S.pos.length)return '<div class="card empty">Aggiungi prima qualche posizione.</div>';
+  var dmc='<div class="card"><h2>Dove li metto?</h2><div class="mu">Hai ricevuto dei soldi o vuoi spostarli? Scegli importo, durata e rischio: ti mostro le offerte che rendono di pi\u00f9 al netto di tasse e bollo, anche di altre banche.</div><p><button class="pri" onclick="openDM()">Apri</button></p></div>';
+  var h=dmc+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
+  if(!S.pos.length)return dmc+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
+}
+
+/* ===== Dove li metto? ===== */
+var OFF=null,DM={amt:1000,hor:12,risk:2,liq:false},BASE_NET=1.28;
+var RISCHIO=['','Molto basso','Basso','Medio','Alto','Molto alto'];
+function loadOff(cb){
+  try{var c=localStorage.getItem('portafoglio_off');if(c)OFF=JSON.parse(c)}catch(e){}
+  try{fetch('offerte.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.offerte){OFF=j;try{localStorage.setItem('portafoglio_off',JSON.stringify(j))}catch(e){}}if(cb)cb()}).catch(function(){if(cb)cb()})}catch(e){if(cb)cb()}
+}
+function monthsTo(d){var a=new Date(d+'T12:00:00'),n=new Date();return Math.max(0,(a-n)/2629800000)}
+function offCalc(o,amt,hor){
+  var port=(o.max>0&&amt>o.max)?o.max:amt;
+  var nr=o.tasso*(1-o.tassa/100)-(o.bollo?0.2:0);
+  var tot,note='';
+  if(o.mesi>0){var m=Math.min(o.mesi,hor);tot=port*nr/100*m/12;if(hor>o.mesi)tot+=port*BASE_NET/100*(hor-o.mesi)/12}
+  else if(o.promoFine){var mp=Math.min(hor,monthsTo(o.promoFine));tot=port*nr/100*mp/12+port*BASE_NET/100*(hor-mp)/12}
+  else tot=port*nr/100*hor/12;
+  return {port:port,nr:nr,anno:port*nr/100,tot:tot,fuori:amt-port,stretto:o.mesi>hor}
+}
+function liquidPos(){return S.pos.filter(function(p){return (p.tipo==='conto'||p.tipo==='fermi')&&!p.bloccato&&num(p.cap)>0})}
+function posNet(p){return tEff(p)*(1-num(p.tassa)/100)}
+function dmList(amt,hor){
+  if(!OFF)return {ok:[],esc:0};
+  var ok=[],esc=0;
+  OFF.offerte.forEach(function(o){
+    if(o.rischio>DM.risk){esc++;return}
+    if(DM.liq&&o.mesi>0){esc++;return}
+    if(amt<(o.min||0)){esc++;return}
+    var c=offCalc(o,amt,hor);
+    if(c.stretto){esc++;return}
+    ok.push({o:o,c:c})
+  });
+  ok.sort(function(a,b){return b.c.tot-a.c.tot});
+  return {ok:ok,esc:esc}
+}
+function dmRun(){
+  var el=document.getElementById('dmRes');if(!el)return;
+  DM.amt=Math.max(0,num(document.getElementById('dm_a').value));DM.hor=num(document.getElementById('dm_h').value)||12;DM.risk=num(document.getElementById('dm_r').value)||2;DM.liq=document.getElementById('dm_l').checked;
+  if(!OFF){el.innerHTML='<div class="mu">Catalogo non disponibile: apri l\'app con la connessione attiva almeno una volta.</div>';return}
+  if(!DM.amt){el.innerHTML='<div class="mu">Scrivi quanto vuoi investire.</div>';return}
+  var L=dmList(DM.amt,DM.hor),h='';
+  var lp=liquidPos().map(function(p){return {p:p,n:posNet(p)}}).sort(function(a,b){return b.n-a.n});
+  var best=lp[0];
+  if(!L.ok.length)h+='<div class="mu">Nessuna offerta con questi filtri. Prova ad alzare il rischio o a togliere "mi serve liquido".</div>';
+  L.ok.slice(0,6).forEach(function(r,i){
+    var o=r.o,c=r.c,tag=o.mesi?('vincolato '+o.mesi+' mesi'):'senza vincolo';
+    var cf='';
+    if(best){var d=c.port*(c.nr-best.n)/100;cf=d>0.5?'<div style="margin-top:6px"><b style="color:var(--ok,#6fcf97)">Batte la tua posizione "'+esc(best.p.nome)+'" ('+best.n.toFixed(2).replace('.',',')+'% netto) di '+eur(d)+' netti/anno</b></div>':'<div class="mu" style="margin-top:6px">La tua posizione "'+esc(best.p.nome)+'" rende già uguale o di più ('+best.n.toFixed(2).replace('.',',')+'% netto).</div>'}
+    var sc='';
+    if(o.mesi===0||o.cat==='mmf'){var n2=(o.tasso-1)*(1-o.tassa/100)-(o.bollo?0.2:0);sc='Se i tassi scendono di 1 punto: '+n2.toFixed(2).replace('.',',')+'% netto (variabile).'}
+    else sc='Tasso fisso fino alla scadenza: se i tassi scendono, tu resti al '+c.nr.toFixed(2).replace('.',',')+'% netto.';
+    var w=[];
+    if(!o.ok)w.push('da verificare: dato meno certo');
+    if(o.promoFine)w.push('promo fino al '+new Date(o.promoFine+'T12:00:00').toLocaleDateString('it-IT'));
+    if(c.fuori>0)w.push('entra solo '+eur(c.port)+': per gli altri '+eur(c.fuori)+' serve un\'altra offerta');
+    if(o.mesi>0&&DM.hor>o.mesi)w.push('dopo '+o.mesi+' mesi il rendimento non è garantito: nel calcolo uso '+BASE_NET.toString().replace('.',',')+'% netto');
+    h+='<div class="card" style="margin:8px 0;padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+(i+1)+'. '+esc(o.nome)+'</b><span style="white-space:nowrap"><b>'+eur2(c.tot)+'</b></span></div>'+
+     '<div class="mu">'+esc(o.emittente)+' · '+tag+' · rischio '+o.rischio+'/5 ('+RISCHIO[o.rischio]+')</div>'+
+     '<div style="margin-top:6px">'+o.tasso.toFixed(2).replace('.',',')+'% lordo → <b>'+c.nr.toFixed(2).replace('.',',')+'% netto</b> (tasse '+o.tassa.toString().replace('.',',')+'%'+(o.bollo?' e bollo 0,20%':'')+') ≈ '+eur(c.anno)+'/anno</div>'+
+     cf+'<div class="mu" style="margin-top:6px">'+esc(o.garanzia)+(o.req?' · '+esc(o.req):'')+'</div>'+
+     (w.length?'<div class="mu" style="margin-top:4px;color:var(--wa,#e0b04a)">'+esc(w.join(' · '))+'</div>':'')+
+     '<div class="mu" style="margin-top:4px">'+esc(sc)+'</div>'+
+     (/^https?:/.test(o.fonte)?'<div style="margin-top:6px"><a href="'+esc(o.fonte)+'" target="_blank" rel="noopener" style="color:var(--ac)">Fonte e dettagli</a></div>':'')+'</div>'
+  });
+  if(L.esc)h+='<div class="mu">'+L.esc+' offerte escluse da rischio, liquidità, importo minimo o vincolo più lungo dell\'orizzonte.</div>';
+  /* soldi già tuoi */
+  var mv=[];
+  lp.forEach(function(x){
+    var cap=num(x.p.cap),bo=null;
+    L.ok.forEach(function(r){if(cap<(r.o.min||0))return;var c=offCalc(r.o,cap,DM.hor);var up=c.port*(c.nr-x.n)/100;if(up>20&&(!bo||up>bo.up))bo={o:r.o,up:up,port:c.port}});
+    if(bo)mv.push({p:x.p,n:x.n,bo:bo})
+  });
+  mv.sort(function(a,b){return b.bo.up-a.bo.up});
+  if(mv.length){h+='<h2 class="sec" style="margin-top:16px">E i soldi che hai già?</h2>';
+    mv.slice(0,3).forEach(function(m){h+='<div class="card" style="margin:8px 0;padding:12px">Da <b>'+esc(m.p.nome)+'</b> ('+esc(m.p.piatt)+', '+m.n.toFixed(2).replace('.',',')+'% netto) a <b>'+esc(m.bo.o.nome)+'</b> ('+esc(m.bo.o.emittente)+'): circa <b>+'+eur(m.bo.up)+'/anno</b> su '+eur(m.bo.port)+'.<div class="mu" style="margin-top:4px">Conviene solo se non ti servono nel periodo scelto'+(m.bo.o.mesi?' (vincolo '+m.bo.o.mesi+' mesi)':'')+' e se apri un nuovo conto serve la verifica sul sito.</div></div>'})}
+  el.innerHTML=h
+}
+function openDM(){
+  var d=OFF&&OFF.aggiornato?new Date(OFF.aggiornato+'T12:00:00'):null;
+  var vecchio=d&&((new Date()-d)/86400000>14);
+  var b='<div class="mu">Dimmi quanto hai e per quanto tempo. Ti mostro dove rende di più <b>al netto di tasse e bollo</b>, anche fuori dalle tue piattaforme.</div>'+
+   '<div class="two"><div><label>Importo (€)</label><input id="dm_a" inputmode="decimal" value="'+DM.amt+'" oninput="dmRun()"></div><div><label>Per quanto tempo</label><select id="dm_h" onchange="dmRun()">'+[3,6,12,24,36,60].map(function(m){return '<option value="'+m+'"'+(m===DM.hor?' selected':'')+'>'+(m<12?m+' mesi':(m/12)+(m===12?' anno':' anni'))+'</option>'}).join('')+'</select></div></div>'+
+   '<label>Rischio massimo</label><select id="dm_r" onchange="dmRun()">'+[1,2,3].map(function(r){return '<option value="'+r+'"'+(r===DM.risk?' selected':'')+'>'+r+' — '+['','Garantito (Stato o fondo depositi)','Anche fondi monetari','Anche obbligazioni'][r]+'</option>'}).join('')+'</select>'+
+   '<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="dm_l" onchange="dmRun()"'+(DM.liq?' checked':'')+' style="width:auto"> Mi serve poterli prelevare in ogni momento</label>'+
+   '<div id="dmRes" style="margin-top:12px"></div>'+
+   '<div class="mu" style="margin-top:10px">Catalogo aggiornato il '+(d?d.toLocaleDateString('it-IT'):'—')+(vecchio?' — <b>è vecchio di più di 2 settimane: controlla i tassi sul sito</b>':'')+'. Non è consulenza finanziaria personalizzata: sono confronti di rendimento su dati pubblici. Verifica sempre condizioni e tassi sul sito dell\'emittente. Azioni, ETF azionari e cripto non sono qui perché il loro rendimento non si può prevedere.</div>';
+  sheetOpen('Dove li metto?',b+'<p><button class="pri" onclick="closeForm()">Chiudi</button></p>');
+  dmRun()
 }
 
 function vDati(){
@@ -915,7 +1005,7 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runInt();runFisse();runPac();render();refreshPrezzi();try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();
+load();runInt();runFisse();runPac();render();refreshPrezzi();loadOff();try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();
 document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
