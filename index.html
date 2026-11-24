@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='1.8',APP_DATE='24 nov 2026';
+var APP_VERSION='1.9',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['1.9','Sezioni a tendina per piattaforma e prezzi delle cripto aggiornati in automatico (quantit\u00e0 \u00d7 prezzo del giorno)'],
  ['1.8','Piani di accumulo automatici ogni mese, scheda Dettagli per ogni posizione e prossimi addebiti'],
  ['1.7','Spese: stipendio con il suo giro, uscite fisse, spese giornaliere, cashback e promemoria'],
  ['1.6','Importazione con un solo tocco da link'],
@@ -248,19 +249,20 @@ function vQuadro0(){
   return h;
 }
 
+var openG=null;function togG(k){openG=(openG===k)?null:k;render()}
 function vPos(){
   var P=S.pos;
   if(!P.length)return '<div class="card empty">Nessuna posizione.<br><br><button class="pri" onclick="openForm()">Aggiungi la prima</button></div>';
   var g={};P.forEach(function(p){(g[p.piatt]=g[p.piatt]||[]).push(p)});
-  return '<div style="margin:6px 2px"><button class="sec" onclick="fSposta()">\u21c4 Sposta soldi tra posizioni</button></div>'+Object.keys(g).map(function(k){
+  return '<div style="margin:6px 2px;display:flex;gap:8px;flex-wrap:wrap"><button class="sec" onclick="fSposta()">\u21c4 Sposta soldi</button>'+(P.some(function(p){return num(p.qty)>0&&p.cg})?'<button class="sec" onclick="refreshPrezzi(true)">\u21bb Aggiorna prezzi</button>':'')+'</div>'+(S.pxT?'<div class="mu" style="margin:4px 4px 0;font-size:12px">Prezzi cripto aggiornati: '+esc(new Date(S.pxT).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))+'</div>':'')+Object.keys(g).map(function(k){
     var t=sum(g[k],function(p){return num(p.cap)});
-    return '<div class="grp"><span class="dot" style="background:'+col(PCOL,k,0)+'"></span><b>'+esc(k)+'</b><span class="t">'+eur(t)+'</span></div>'+g[k].map(function(p){
+    return '<div class="grp" role="button" tabindex="0" aria-expanded="'+(openG===k)+'" onclick="togG(\''+esc(k).replace(/'/g,'')+'\')" style="cursor:pointer"><span class="dot" style="background:'+col(PCOL,k,0)+'"></span><b>'+esc(k)+'</b><span class="mu">'+g[k].length+'</span><span class="t">'+eur(t)+'</span><span style="color:var(--mu);display:inline-block;transition:transform .2s;transform:rotate('+(openG===k?90:0)+'deg)">\u203a</span></div>'+(openG!==k?'':g[k].map(function(p){
       var tp=TIPI[p.tipo]||TIPI.fermi;
       return '<div class="card pos" style="border-left:3px solid '+col(PCOL,p.piatt,0)+'" onclick="openForm(\''+esc(p.id)+'\')"><div class="row"><b>'+esc(p.nome)+'</b><b>'+eur(num(p.cap))+'</b></div>'+
        '<div class="mu">'+esc(tp.n)+' · tasso '+pc(num(p.tasso))+(num(p.pmt)?' · +'+eur(num(p.pmt))+'/mese':'')+'</div>'+
-       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(num(p.nom)>0?'<span class="tag">nominale '+esc(eur(num(p.nom)))+'</span>':'')+(num(p.pacGiorno)>=1&&num(p.pmt)>0?'<span class="tag">piano automatico il '+esc(p.pacGiorno)+' del mese</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
+       '<div>'+(p.scad&&new Date(p.scad).getTime()<Date.now()?'<span class="tag" style="color:var(--ok)">scaduto: rinnova o sposta</span>':'')+(num(p.nom)>0?'<span class="tag">nominale '+esc(eur(num(p.nom)))+'</span>':'')+(num(p.pacGiorno)>=1&&num(p.pmt)>0?'<span class="tag">piano automatico il '+esc(p.pacGiorno)+' del mese</span>':'')+(num(p.qty)>0&&p.cg?'<span class="tag">'+esc(String(num(p.qty)))+' \u00d7 '+(p.px?esc(eur(p.px)):'prezzo da aggiornare')+'</span>':'')+(p.variabile?'<span class="tag">tasso variabile</span>':'')+(p.bloccato?'<span class="tag">vincolato</span>':'')+
        (p.scad?'<span class="tag">scade '+esc(dt(p.scad))+'</span>':(num(p.orizz)?'<span class="tag">orizzonte '+esc(num(p.orizz))+' anni</span>':''))+'</div>'+
-       '<div class="acts"><button class="mini" onclick="event.stopPropagation();fDett(\''+esc(p.id)+'\')">Dettagli</button><button class="mini" onclick="event.stopPropagation();fSaldo(\''+esc(p.id)+'\')">Aggiorna saldo</button><button class="mini" onclick="event.stopPropagation();fSposta(\''+esc(p.id)+'\')">Sposta soldi</button>'+(p.scad||p.bloccato?'<button class="mini" onclick="event.stopPropagation();fRinnova(\''+esc(p.id)+'\')">Rinnova blocco</button>':'')+'</div></div>'}).join('');
+       '<div class="acts"><button class="mini" onclick="event.stopPropagation();fDett(\''+esc(p.id)+'\')">Dettagli</button><button class="mini" onclick="event.stopPropagation();fSaldo(\''+esc(p.id)+'\')">Aggiorna saldo</button><button class="mini" onclick="event.stopPropagation();fSposta(\''+esc(p.id)+'\')">Sposta soldi</button>'+(p.scad||p.bloccato?'<button class="mini" onclick="event.stopPropagation();fRinnova(\''+esc(p.id)+'\')">Rinnova blocco</button>':'')+'</div></div>'}).join(''));
   }).join('');
 }
 
@@ -361,7 +363,7 @@ function go(t){tab=t;animGrowth=(t==='quadro');render();window.scrollTo(0,0)}
 
 function openForm(id){
   var p=id?S.pos.filter(function(x){return x.id===id})[0]:null;
-  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false,pacGiorno:'',pacDa:''};
+  var isNew=!p;if(isNew)p={id:uid(),nome:'',piatt:'Trade Republic',tipo:'etf',cap:'',tasso:'',tassa:26,costi:'',scad:'',orizz:'',pmt:'',variabile:false,bloccato:false,pacGiorno:'',pacDa:'',qty:'',cg:''};
   var opt=function(list,sel,lab){return list.map(function(k){var v=lab?k:k;return '<option value="'+esc(k)+'"'+(k===sel?' selected':'')+'>'+esc(lab?lab(k):k)+'</option>'}).join('')};
   var m=document.getElementById('modal');
   m.innerHTML='<div class="modal" onclick="if(event.target===this)closeForm()"><div class="sheet"><h2 style="margin:0 0 4px">'+(isNew?'Nuova posizione':'Modifica posizione')+'</h2>'+
@@ -373,6 +375,7 @@ function openForm(id){
   '<label>Valore nominale o versato (€, facoltativo): base su cui si pagano le tasse</label><input id="f_nom" inputmode="decimal" value="'+esc(p.nom==null?'':p.nom)+'">'+
   '<label>Versamento mensile (€, facoltativo)</label><input id="f_pmt" inputmode="decimal" value="'+esc(p.pmt)+'">'+
   '<div class="two"><div><label>Giorno del versamento (1-31)</label><input id="f_pg" inputmode="numeric" value="'+esc(p.pacGiorno==null?'':p.pacGiorno)+'"></div><div><label>Pagato da</label><select id="f_pd"><option value="">Nessuno (non scalare)</option><option value="cash"'+(p.pacDa==='cash'?' selected':'')+'>Cash Trade Republic</option>'+S.pos.filter(function(x){return x.id!==p.id}).map(function(x){return '<option value="'+esc(x.id)+'"'+(p.pacDa===x.id?' selected':'')+'>'+esc(x.nome)+'</option>'}).join('')+'</select></div></div>'+
+  '<div class="two"><div><label>Quantit\u00e0 (monete, facoltativo)</label><input id="f_qty" inputmode="decimal" value="'+esc(p.qty==null?'':p.qty)+'"></div><div><label>Codice prezzo (es. bitcoin)</label><input id="f_cg" value="'+esc(p.cg||'')+'" autocapitalize="none"></div></div><div class="note">Con quantit\u00e0 e codice, il capitale si aggiorna da solo al prezzo del giorno (codici di CoinGecko: bitcoin, ethereum, crypto-com-chain...).</div>'+
   '<div class="note">Con giorno e conto di pagamento, ogni mese l\'app aggiunge il versamento alla posizione e lo toglie dal conto, da sola.</div>'+
   '<div class="chk"><input type="checkbox" id="f_var"'+(p.variabile?' checked':'')+'><span>Tasso variabile</span></div>'+
   '<div class="chk"><input type="checkbox" id="f_blk"'+(p.bloccato?' checked':'')+'><span>Vincolato (non posso ritirarlo prima della scadenza)</span></div>'+
@@ -388,7 +391,7 @@ function saveForm(id,isNew){
   var g=function(k){return document.getElementById(k).value};
   var nome=g('f_nome').trim();if(!nome){document.getElementById('f_nome').focus();return}
   var o={id:id,nome:nome,piatt:g('f_piatt'),tipo:g('f_tipo'),cap:num(g('f_cap')),tasso:num(g('f_tasso')),tassa:num(g('f_tassa')),costi:num(g('f_costi')),
-   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||''};
+   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||'',qty:g('f_qty')===''?'':num(g('f_qty')),cg:g('f_cg').trim().toLowerCase()};
   if(isNew)S.pos.push(o);else S.pos=S.pos.map(function(x){return x.id===id?o:x});
   save();closeForm();render();
 }
@@ -417,9 +420,9 @@ function doDownload(){
   try{var b=new Blob([backupText()],{type:'application/json'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download='portafoglio-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000);msg.textContent='Backup scaricato.'}catch(e){msg.textContent='Download non riuscito: usa "Copia testo".'}
 }
 function doFile(inp){var f=inp.files&&inp.files[0];if(!f)return;var r=new FileReader();r.onload=function(){document.getElementById('imp').value=String(r.result);doImport()};r.readAsText(f)}
-function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today(),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':Math.min(31,Math.max(1,Math.round(num(p.pacGiorno)))),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||'')}}
+function cleanPos(p){return {id:uid(),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:today(),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':Math.min(31,Math.max(1,Math.round(num(p.pacGiorno)))),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||''),qty:(p.qty===''||p.qty==null)?'':num(p.qty),cg:String(p.cg||'')}}
 function addPositions(arr){
-  var n=0,sk=0,up=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.filter(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)})[0];if(dup){if(c.pacGiorno!==''&&dup.pacGiorno!==c.pacGiorno){dup.pacGiorno=c.pacGiorno;dup.pacDa=c.pacDa;dup.pacUlt=dup.pacUlt||c.pacUlt;up++}else sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
+  var n=0,sk=0,up=0;arr.forEach(function(x){var c=cleanPos(x);var dup=S.pos.filter(function(q){return q.nome===c.nome&&q.scad===c.scad&&num(q.nom)===num(c.nom)})[0];if(dup){if(c.cg&&(dup.cg!==c.cg||num(dup.qty)!==num(c.qty))){dup.cg=c.cg;dup.qty=c.qty;up++;return}if(c.pacGiorno!==''&&dup.pacGiorno!==c.pacGiorno){dup.pacGiorno=c.pacGiorno;dup.pacDa=c.pacDa;dup.pacUlt=dup.pacUlt||c.pacUlt;up++}else sk++;return}S.pos.push(c);n++;logOp('Aggiunta '+c.nome)});
   if(n||up)save();return {n:n,sk:sk,up:up};
 }
 function doAdd(){
@@ -434,7 +437,7 @@ function importFromHash(){
   try{var b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
     var o=JSON.parse(decodeURIComponent(escape(atob(b))));if(!o||typeof o!=='object')throw 0;
     var arr=Array.isArray(o)?o:(Array.isArray(o.pos)?o.pos:[]),fx=(!Array.isArray(o)&&Array.isArray(o.fisse))?o.fisse:[];
-    var r=addPositions(arr),rf=addFisse(fx);runPac();tab=(rf.n&&!r.n)?'spese':'pos';render();
+    var r=addPositions(arr),rf=addFisse(fx);runPac();setTimeout(function(){refreshPrezzi(true)},300);tab=(rf.n&&!r.n)?'spese':'pos';render();
     var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
     var tx=pt.join(', ');toast(pt.length?(tx.charAt(0).toUpperCase()+tx.slice(1)+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
   }catch(e){toast('Link di importazione non valido.')}
@@ -623,6 +626,16 @@ function nextOcc(g){
   var c=cand(y,m);if(c<t){m++;if(m>11){m=0;y++}c=cand(y,m)}return c;
 }
 function pacSrc(p){return p.pacDa==='cash'?cashPos():(p.pacDa?findP(p.pacDa):null)}
+var pxBusy=false;
+function refreshPrezzi(man){
+  var L=S.pos.filter(function(p){return num(p.qty)>0&&p.cg});if(!L.length||pxBusy)return;
+  if(!man&&S.pxT&&Date.now()-S.pxT<10*60*1000)return;
+  var ids=[];L.forEach(function(p){if(ids.indexOf(p.cg)<0)ids.push(p.cg)});pxBusy=true;
+  fetch('https://api.coingecko.com/api/v3/simple/price?ids='+encodeURIComponent(ids.join(','))+'&vs_currencies=eur').then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){
+    var n=0;L.forEach(function(p){var v=d&&d[p.cg]&&d[p.cg].eur;if(v>0){p.px=v;p.cap=Math.round(num(p.qty)*v*100)/100;p.agg=today();n++}});
+    if(n){S.pxT=Date.now();save();render();if(man)toast('Prezzi aggiornati: '+n+(n===1?' posizione.':' posizioni.'))}else if(man)toast('Prezzo non trovato: controlla il codice.');
+  }).catch(function(){if(man)toast('Non riesco a leggere i prezzi ora. Riprova tra poco.')}).then(function(){pxBusy=false});
+}
 function runPac(){
   var now=new Date(),ty=now.getFullYear(),tm=now.getMonth(),td=now.getDate(),changed=false,msgs=[];
   S.pos.forEach(function(p){
@@ -696,8 +709,8 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runPac();render();importFromHash();
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&runPac())render()});
+load();runPac();render();refreshPrezzi();importFromHash();
+document.addEventListener('visibilitychange',function(){if(!document.hidden){if(runPac())render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 </script>
