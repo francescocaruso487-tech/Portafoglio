@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.5',APP_DATE='24 nov 2026';
+var APP_VERSION='2.6',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.6','Uscite fisse annuali con il loro mese: compaiono nei prossimi addebiti e scalano il saldo il giorno giusto'],
  ['2.5','Carburante: puoi segnare un rifornimento non completo, che non falsa consumi e autonomia'],
  ['2.4','Carburante: litri, importo e km a ogni pieno, con prezzo al litro, consumo e km per pieno'],
  ['2.3','Le uscite fisse scalano da sole il saldo del conto nel giorno di addebito e contano nel cashback'],
@@ -643,20 +644,20 @@ function fFissa(id){
   var o=function(list,sel){return list.map(function(k){return '<option'+(k===sel?' selected':'')+'>'+esc(k)+'</option>'}).join('')};
   sheetOpen(isNew?'Nuova uscita fissa':'Modifica uscita fissa','<label>Nome</label><input id="x_nome" value="'+esc(f.nome)+'" placeholder="es. Spotify">'+
    '<div class="two"><div><label>Importo (€)</label><input id="x_imp" inputmode="decimal" value="'+esc(f.imp)+'"></div><div><label>Ogni</label><select id="x_freq"><option value="mese"'+(f.freq==='mese'?' selected':'')+'>mese</option><option value="anno"'+(f.freq==='anno'?' selected':'')+'>anno</option></select></div></div>'+
-   '<div class="two"><div><label>Giorno del mese (facoltativo)</label><input id="x_g" inputmode="numeric" value="'+esc(f.giorno)+'"></div><div><label>Categoria</label><select id="x_cat">'+o(CAT,f.cat)+'</select></div></div>'+
+   '<div class="two"><div><label>Giorno del mese (facoltativo)</label><input id="x_g" inputmode="numeric" value="'+esc(f.giorno)+'"></div><div><label>Mese (1-12, se annuale)</label><input id="x_m" inputmode="numeric" value="'+esc(f.mese||'')+'"></div></div><label>Categoria</label><select id="x_cat">'+o(CAT,f.cat)+'</select>'+
    '<label>Paga da</label><select id="x_piatt">'+o(PIATT,f.piatt)+'</select>'+
    '<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="saveFissa(\''+esc(f.id)+'\','+(isNew?'true':'false')+')">Salva</button><button class="sec" onclick="closeForm()">Annulla</button>'+(isNew?'':'<button class="dan" onclick="delFissa(\''+esc(f.id)+'\')">Elimina</button>')+'</p>');
 }
 function saveFissa(id,isNew){
   var nome=g_('x_nome').trim();if(!nome){document.getElementById('x_nome').focus();return}
-  var o={id:id,nome:nome,imp:num(g_('x_imp')),freq:g_('x_freq'),giorno:g_('x_g')===''?'':Math.min(31,Math.max(1,Math.round(num(g_('x_g'))))),cat:g_('x_cat'),piatt:g_('x_piatt'),ult:(S.fisse.filter(function(x){return x.id===id})[0]||{}).ult||''};
+  var o={id:id,nome:nome,imp:num(g_('x_imp')),freq:g_('x_freq'),giorno:g_('x_g')===''?'':Math.min(31,Math.max(1,Math.round(num(g_('x_g'))))),cat:g_('x_cat'),piatt:g_('x_piatt'),mese:g_('x_m')===''?'':Math.min(12,Math.max(1,Math.round(num(g_('x_m'))))),ult:(S.fisse.filter(function(x){return x.id===id})[0]||{}).ult||''};
   if(isNew)S.fisse.push(o);else S.fisse=S.fisse.map(function(x){return x.id===id?o:x});
   save();closeForm();render();
 }
 function delFissa(id){S.fisse=S.fisse.filter(function(x){return x.id!==id});save();closeForm();render()}
 function addFisse(arr){
   var n=0,sk=0;arr.forEach(function(x){
-    var c={id:uid(),nome:String(x.nome||'Senza nome'),imp:num(x.imp),freq:x.freq==='anno'?'anno':'mese',giorno:x.giorno===''||x.giorno==null?'':Math.min(31,Math.max(1,Math.round(num(x.giorno)))),cat:CAT.indexOf(x.cat)>=0?x.cat:'Altro',piatt:String(x.piatt||'Altro'),ult:''};
+    var c={id:uid(),nome:String(x.nome||'Senza nome'),imp:num(x.imp),freq:x.freq==='anno'?'anno':'mese',giorno:x.giorno===''||x.giorno==null?'':Math.min(31,Math.max(1,Math.round(num(x.giorno)))),cat:CAT.indexOf(x.cat)>=0?x.cat:'Altro',piatt:String(x.piatt||'Altro'),mese:x.mese===''||x.mese==null?'':Math.min(12,Math.max(1,Math.round(num(x.mese)))),ult:''};
     var dup=S.fisse.some(function(q){return q.nome===c.nome&&num(q.imp)===c.imp});if(dup){sk++;return}S.fisse.push(c);n++});
   if(n)save();return {n:n,sk:sk};
 }
@@ -665,6 +666,7 @@ function addFisse(arr){
 function pad(n){return (n<10?'0':'')+n}
 function pmonthLen(y,m){return new Date(y,m+1,0).getDate()}
 function pacKey(y,m){while(m<0){m+=12;y--}while(m>11){m-=12;y++}return y+'-'+pad(m+1)}
+function nextOccA(g,mo){var n=new Date(),y=n.getFullYear(),t=today();var c=function(y){return y+'-'+pad(mo)+'-'+pad(Math.min(g,pmonthLen(y,mo-1)))};var x=c(y);if(x<t)x=c(y+1);return x}
 function nextOcc(g){
   var n=new Date(),y=n.getFullYear(),m=n.getMonth(),t=today();
   var cand=function(y,m){return y+'-'+pad(m+1)+'-'+pad(Math.min(g,pmonthLen(y,m)))};
@@ -710,7 +712,21 @@ function payPos(f){if(f.piatt==='Trade Republic')return cashPos();return S.pos.f
 function runFisse(){
   var now=new Date(),ty=now.getFullYear(),tm=now.getMonth(),td=now.getDate(),changed=false;
   S.fisse.forEach(function(f){
-    var g=num(f.giorno);if(f.freq==='anno'||!(g>=1)||!(num(f.imp)>0))return;
+    var g=num(f.giorno);
+    if(f.freq==='anno'){
+      var mo=num(f.mese);if(!(g>=1)||!(mo>=1)||!(num(f.imp)>0))return;
+      var dueY=function(y){return y+'-'+pad(mo)+'-'+pad(Math.min(g,pmonthLen(y,mo-1)))<=today()};
+      if(!f.ult){f.ult=String(dueY(ty)?ty:ty-1);changed=true;return}
+      for(var yy=+f.ult+1;yy<=ty&&yy-+f.ult<=5;yy++){
+        if(!dueY(yy))break;
+        var pa=payPos(f),lw=false;
+        if(pa){lw=num(pa.cap)<num(f.imp);pa.cap=Math.max(0,r2(num(pa.cap)-num(f.imp)));pa.agg=today()}
+        f.ult=String(yy);changed=true;
+        logOp('Addebito '+f.nome+': -'+eur2(num(f.imp))+(pa?' da '+pa.nome:'')+(lw?' (saldo insufficiente: controlla)':''));
+      }
+      return;
+    }
+    if(!(g>=1)||!(num(f.imp)>0))return;
     var dueNow=td>=Math.min(g,pmonthLen(ty,tm));
     if(!f.ult){f.ult=dueNow?pacKey(ty,tm):pacKey(ty,tm-1);changed=true;return}
     var y=+f.ult.slice(0,4),m=+f.ult.slice(5,7)-1;
@@ -752,7 +768,7 @@ function runPac(){
 function proxCard(){
   var ev=[];
   S.pos.forEach(function(p){var g=num(p.pacGiorno);if(num(p.pmt)>0&&g>=1)ev.push({d:nextOcc(g),n:p.nome,a:num(p.pmt),k:'Piano di accumulo'})});
-  S.fisse.forEach(function(f){var g=num(f.giorno);if(g>=1&&f.freq!=='anno')ev.push({d:nextOcc(g),n:f.nome,a:num(f.imp),k:'Uscita fissa'})});
+  S.fisse.forEach(function(f){var g=num(f.giorno);if(g>=1&&f.freq!=='anno')ev.push({d:nextOcc(g),n:f.nome,a:num(f.imp),k:'Uscita fissa'});else if(g>=1&&f.freq==='anno'&&num(f.mese)>=1)ev.push({d:nextOccA(g,num(f.mese)),n:f.nome,a:num(f.imp),k:'Uscita annuale'})});
   if(!ev.length)return '';
   ev.sort(function(a,b){return a.d<b.d?-1:(a.d>b.d?1:0)});
   var plans=sum(S.pos,function(p){return num(p.pacGiorno)>=1?num(p.pmt):0});
