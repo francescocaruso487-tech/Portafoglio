@@ -131,8 +131,9 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.2',APP_DATE='24 nov 2026';
+var APP_VERSION='3.3',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['3.3','Catalogo: aggiunti i buoni fruttiferi postali (6 mesi, 4 anni, cedola, ordinario, 3x4, Rinnova) e orizzonti fino a 20 anni; le offerte scadute non compaiono pi\u00f9'],
  ['3.2','Nuovo look: vetro scuro semi-trasparente con sfumature, pulsanti glass e angoli pi\u00f9 morbidi, pensato per One UI'],
  ['3.1','Carburante: segna l\u2019autonomia prima e dopo il pieno, l\u2019app stima i km fatti tra un pieno e l\u2019altro. Consigli: avviso automatico se c\u2019\u00e8 un\u2019offerta che rende pi\u00f9 di una tua posizione'],
  ['3.0','Nuova funzione "Dove li metto?" in Consigli: scegli importo, durata e rischio e ti mostra dove rende di pi\u00f9 al netto, anche fuori dalle tue piattaforme'],
@@ -490,7 +491,7 @@ function dmList(amt,hor){
   if(!OFF)return {ok:[],esc:0};
   var ok=[],esc=0;
   OFF.offerte.forEach(function(o){
-    if(o.rischio>DM.risk){esc++;return}
+    if(o.rischio>DM.risk||(o.promoFine&&monthsTo(o.promoFine)<=0)){esc++;return}
     if(DM.liq&&o.mesi>0){esc++;return}
     if(amt<(o.min||0)){esc++;return}
     var c=offCalc(o,amt,hor);
@@ -546,7 +547,7 @@ function openDM(){
   var d=OFF&&OFF.aggiornato?new Date(OFF.aggiornato+'T12:00:00'):null;
   var vecchio=d&&((new Date()-d)/86400000>14);
   var b='<div class="mu">Dimmi quanto hai e per quanto tempo. Ti mostro dove rende di più <b>al netto di tasse e bollo</b>, anche fuori dalle tue piattaforme.</div>'+
-   '<div class="two"><div><label>Importo (€)</label><input id="dm_a" inputmode="decimal" value="'+DM.amt+'" oninput="dmRun()"></div><div><label>Per quanto tempo</label><select id="dm_h" onchange="dmRun()">'+[3,6,12,24,36,60].map(function(m){return '<option value="'+m+'"'+(m===DM.hor?' selected':'')+'>'+(m<12?m+' mesi':(m/12)+(m===12?' anno':' anni'))+'</option>'}).join('')+'</select></div></div>'+
+   '<div class="two"><div><label>Importo (€)</label><input id="dm_a" inputmode="decimal" value="'+DM.amt+'" oninput="dmRun()"></div><div><label>Per quanto tempo</label><select id="dm_h" onchange="dmRun()">'+[3,6,12,24,36,60,96,144,240].map(function(m){return '<option value="'+m+'"'+(m===DM.hor?' selected':'')+'>'+(m<12?m+' mesi':(m/12)+(m===12?' anno':' anni'))+'</option>'}).join('')+'</select></div></div>'+
    '<label>Rischio massimo</label><select id="dm_r" onchange="dmRun()">'+[1,2,3].map(function(r){return '<option value="'+r+'"'+(r===DM.risk?' selected':'')+'>'+r+' — '+['','Garantito (Stato o fondo depositi)','Anche fondi monetari','Anche obbligazioni'][r]+'</option>'}).join('')+'</select>'+
    '<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="dm_l" onchange="dmRun()"'+(DM.liq?' checked':'')+' style="width:auto"> Mi serve poterli prelevare in ogni momento</label>'+
    '<div id="dmRes" style="margin-top:12px"></div>'+
