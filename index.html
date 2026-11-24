@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Il mio portafoglio</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0b111f">
+<meta name="theme-color" content="#070b14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" href="icon-192.png">
@@ -91,6 +91,35 @@ pre.ai{white-space:pre-wrap;font:inherit;margin:8px 0 0}
 .grp b{font-weight:600}.grp span.t{margin-left:auto;color:var(--mu)}
 button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;margin:8px 2px}.neg{color:var(--er)}.posv{color:var(--ok)}
 @media (prefers-reduced-motion:reduce){.gline{animation:none;stroke-dashoffset:0}}
+/* ===== v3.2 vetro scuro (stile One UI) ===== */
+:root{--bg:#070b14;--bg2:#0e1524;--card:#ffffff0d;--card2:#ffffff12;--ln:#ffffff1f;--r:26px;--gl:blur(22px) saturate(150%)}
+body{background:#070b14;background-image:radial-gradient(60% 40% at 15% 0%,#2a3f7a55 0%,transparent 70%),radial-gradient(55% 35% at 100% 18%,#d4a84f2e 0%,transparent 70%),radial-gradient(70% 45% at 0% 100%,#3a2a6b40 0%,transparent 70%);background-attachment:fixed;background-repeat:no-repeat}
+.card,.pc,.sheet,nav,.hero{-webkit-backdrop-filter:var(--gl);backdrop-filter:var(--gl)}
+.card{background:linear-gradient(160deg,#ffffff14,#ffffff07);border:1px solid #ffffff1f;box-shadow:inset 0 1px 0 #ffffff26,0 10px 30px #0000004d;padding:18px}
+.hero{border-radius:32px;border:1px solid #ffffff26;background:radial-gradient(120% 90% at 85% 0%,#d4a84f33 0%,transparent 58%),linear-gradient(160deg,#ffffff18,#ffffff08);box-shadow:inset 0 1px 0 #ffffff33,0 16px 40px #0006}
+.pc{border-radius:24px;background:linear-gradient(160deg,#ffffff14,#ffffff07);border:1px solid #ffffff1f;box-shadow:inset 0 1px 0 #ffffff26}
+.pill{background:#ffffff14;border:1px solid #ffffff14}
+nav{left:12px;right:12px;border-radius:30px;background:#0e1526b8;border:1px solid #ffffff26;box-shadow:inset 0 1px 0 #ffffff26,0 12px 34px #000a;padding:6px}
+nav button{border-radius:24px;transition:background .2s,color .2s}
+nav button.on{background:linear-gradient(160deg,#f0cf8638,#d4a84f1f);box-shadow:inset 0 1px 0 #ffffff33,0 0 18px #d4a84f33}
+button.pri{background:linear-gradient(160deg,#f0cf8648,#d4a84f2b);color:#ffe9b3;border:1px solid #f0cf8680;border-radius:18px;box-shadow:inset 0 1px 0 #ffffff55,0 8px 22px #d4a84f33;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);text-shadow:0 1px 8px #0007}
+button.sec,button.dan,.mini{background:#ffffff12;border:1px solid #ffffff26;border-radius:18px;box-shadow:inset 0 1px 0 #ffffff22;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mini{border-radius:16px}
+button{transition:transform .12s ease,background .2s}
+button:active{transform:scale(.96)}
+.fab{border-radius:34px;box-shadow:inset 0 1px 0 #ffffff55,0 12px 30px #000a,0 0 24px #d4a84f40}
+.chip{background:#ffffff0d;border-color:#ffffff22}
+.chip.on{background:linear-gradient(160deg,#f0cf86,#d4a84f);color:#241a05}
+.modal{background:#02050cb3;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.sheet{background:linear-gradient(180deg,#1a2338e6,#0e1524f2);border:1px solid #ffffff26;border-bottom:0;border-radius:34px 34px 0 0;box-shadow:inset 0 1px 0 #ffffff33}
+input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-radius:16px;box-shadow:inset 0 1px 0 #ffffff12}
+.alert{border-left-width:1px;border-left-color:#ffffff1f;position:relative}
+.alert::before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:4px;border-radius:0 4px 4px 0;background:var(--wa)}
+.alert.er::before{background:var(--er)}.alert.ok::before{background:var(--ok)}.alert.in::before{background:var(--ac)}
+.ver{background:#ffffff12;border-color:#ffffff26;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.bar{background:#ffffff1a}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.pc,.hero{background:#131c31}.sheet{background:#0e1524}nav{background:#101a2f}}
+@media (prefers-reduced-motion:reduce){button{transition:none}button:active{transform:none}}
 </style>
 </head>
 <body>
@@ -102,8 +131,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.1',APP_DATE='24 nov 2026';
+var APP_VERSION='3.2',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['3.2','Nuovo look: vetro scuro semi-trasparente con sfumature, pulsanti glass e angoli pi\u00f9 morbidi, pensato per One UI'],
  ['3.1','Carburante: segna l\u2019autonomia prima e dopo il pieno, l\u2019app stima i km fatti tra un pieno e l\u2019altro. Consigli: avviso automatico se c\u2019\u00e8 un\u2019offerta che rende pi\u00f9 di una tua posizione'],
  ['3.0','Nuova funzione "Dove li metto?" in Consigli: scegli importo, durata e rischio e ti mostra dove rende di pi\u00f9 al netto, anche fuori dalle tue piattaforme'],
  ['2.9','Tocca qualsiasi numero, piattaforma, avviso o spesa per un pop-up con i dettagli e il calcolo'],
