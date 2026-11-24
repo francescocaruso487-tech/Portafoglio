@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.0',APP_DATE='24 nov 2026';
+var APP_VERSION='2.1',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.1','Interessi automatici ogni giorno su conti, cash e staking, con il totale maturato e la stima al giorno'],
  ['2.0','Tetto del tasso alto (es. Revolut 3.000 \u20ac): rendimento calcolato a livelli e avviso per spostare il sovrappi\u00f9 su Trade Republic'],
  ['1.9','Sezioni a tendina per piattaforma e prezzi delle cripto aggiornati in automatico (quantit\u00e0 \u00d7 prezzo del giorno)'],
  ['1.8','Piani di accumulo automatici ogni mese, scheda Dettagli per ogni posizione e prossimi addebiti'],
@@ -236,7 +237,7 @@ function vQuadro0(){
   var y1=sum(P,function(p){return valueAt(p,1).netto}),y20=sum(P,function(p){return valueAt(p,20).netto});
   var d1=y1-tot;
   var h='<div class="hero"><div class="lab">Patrimonio censito</div><div class="tot">'+esc(new Intl.NumberFormat('it-IT',{maximumFractionDigits:0}).format(Math.round(tot)))+'<small>\u20ac</small></div>'+
-   '<div class="pills"><span class="pill a">rendimento medio '+pc(wr)+'</span><span class="pill '+(d1>=0?'g':'')+'">'+(d1>=0?'+':'')+esc(eur(d1))+' netti in 1 anno</span><span class="pill">'+P.length+' posizioni</span></div>'+
+   '<div class="pills"><span class="pill a">rendimento medio '+pc(wr)+'</span><span class="pill '+(d1>=0?'g':'')+'">'+(d1>=0?'+':'')+esc(eur(d1))+' netti in 1 anno</span><span class="pill">'+P.length+' posizioni</span>'+(intOggi()>0?'<span class="pill g">\u2248 +'+esc(eur2(intOggi()))+' al giorno</span>':'')+(intTotale()>0?'<span class="pill g">interessi accreditati '+esc(eur2(intTotale()))+'</span>':'')+'</div>'+
    growth(P)+'<div class="note" style="margin:0 0 12px">Linea piena: valore netto stimato. Tratteggio: quanto hai versato. Sono ipotesi con i tassi che hai impostato, non garanzie.</div></div>';
   var up=P.filter(function(p){return p.scad}).sort(function(a,b){return a.scad<b.scad?-1:1}).slice(0,4);
   if(up.length){h+='<div class="sechead"><h2>Prossime scadenze</h2><button class="chip" onclick="go(\'scad\')">Tutte</button></div><div class="card" style="padding:4px 14px">'+up.map(function(p){
@@ -350,6 +351,7 @@ function vDati(){
 
 /* ===== azioni ===== */
 function render(){
+  runInt();
   var ag=animGrowth;
   var ve=document.getElementById('ver');if(ve)ve.textContent='v'+APP_VERSION+' \u00b7 '+APP_DATE;
   setSub();
@@ -396,7 +398,7 @@ function saveForm(id,isNew){
   var g=function(k){return document.getElementById(k).value};
   var nome=g('f_nome').trim();if(!nome){document.getElementById('f_nome').focus();return}
   var o={id:id,nome:nome,piatt:g('f_piatt'),tipo:g('f_tipo'),cap:num(g('f_cap')),tasso:num(g('f_tasso')),tassa:num(g('f_tassa')),costi:num(g('f_costi')),
-   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||'',qty:g('f_qty')===''?'':num(g('f_qty')),cg:g('f_cg').trim().toLowerCase(),tetto:g('f_tt')===''?'':num(g('f_tt')),tassoOltre:g('f_to')===''?'':num(g('f_to'))};
+   nom:g('f_nom')===''?'':num(g('f_nom')),scad:g('f_scad'),orizz:g('f_orizz')===''?'':num(g('f_orizz')),pmt:num(g('f_pmt')),variabile:document.getElementById('f_var').checked,bloccato:document.getElementById('f_blk').checked,agg:today(),pacGiorno:g('f_pg')===''?'':Math.min(31,Math.max(1,Math.round(num(g('f_pg'))))),pacDa:g('f_pd'),pacUlt:(findP(id)||{}).pacUlt||'',accDa:(findP(id)||{}).accDa||'',intTot:(findP(id)||{}).intTot||0,px:(findP(id)||{}).px,qty:g('f_qty')===''?'':num(g('f_qty')),cg:g('f_cg').trim().toLowerCase(),tetto:g('f_tt')===''?'':num(g('f_tt')),tassoOltre:g('f_to')===''?'':num(g('f_to'))};
   if(isNew)S.pos.push(o);else S.pos=S.pos.map(function(x){return x.id===id?o:x});
   save();closeForm();render();
 }
@@ -451,7 +453,7 @@ function importFromHash(){
 function doImport(){
   var msg=document.getElementById('bkMsg');
   try{var o=JSON.parse(document.getElementById('imp').value);if(!o||!Array.isArray(o.pos))throw 0;
-    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||''),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':num(p.pacGiorno),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||''),qty:(p.qty===''||p.qty==null)?'':num(p.qty),cg:String(p.cg||''),tetto:(p.tetto===''||p.tetto==null)?'':num(p.tetto),tassoOltre:(p.tassoOltre===''||p.tassoOltre==null)?'':num(p.tassoOltre)}});
+    o.pos=o.pos.map(function(p){return {id:String(p.id||uid()),nome:String(p.nome||'Senza nome'),piatt:String(p.piatt||'Altro'),tipo:TIPI[p.tipo]?p.tipo:'fermi',cap:num(p.cap),nom:p.nom===''||p.nom==null?'':num(p.nom),tasso:num(p.tasso),tassa:num(p.tassa),costi:num(p.costi),scad:String(p.scad||''),orizz:p.orizz===''||p.orizz==null?'':num(p.orizz),pmt:num(p.pmt),variabile:!!p.variabile,bloccato:!!p.bloccato,agg:String(p.agg||''),pacGiorno:(p.pacGiorno===''||p.pacGiorno==null)?'':num(p.pacGiorno),pacDa:String(p.pacDa||''),pacUlt:String(p.pacUlt||''),qty:(p.qty===''||p.qty==null)?'':num(p.qty),cg:String(p.cg||''),tetto:(p.tetto===''||p.tetto==null)?'':num(p.tetto),tassoOltre:(p.tassoOltre===''||p.tassoOltre==null)?'':num(p.tassoOltre),accDa:String(p.accDa||''),intTot:num(p.intTot)}});
     o.set=o.set||{};o.set.target=o.set.target||{};o.set.maxPiatt=num(o.set.maxPiatt)||60;o.set.maxCripto=num(o.set.maxCripto)||15;o.set.minIdle=o.set.minIdle==null?500:num(o.set.minIdle);
     S=o;normalize();save();render();
   }catch(e){msg.textContent='Backup non valido.'}
@@ -641,6 +643,31 @@ function refreshPrezzi(man){
     if(n){S.pxT=Date.now();save();render();if(man)toast('Prezzi aggiornati: '+n+(n===1?' posizione.':' posizioni.'))}else if(man)toast('Prezzo non trovato: controlla il codice.');
   }).catch(function(){if(man)toast('Non riesco a leggere i prezzi ora. Riprova tra poco.')}).then(function(){pxBusy=false});
 }
+function dnum(s){return Math.round(new Date(s+'T12:00:00').getTime()/864e5)}
+var ACC=['conto','fermi','staking'];
+function accrues(p){return ACC.indexOf(p.tipo)>=0&&tEff(p)>0&&num(p.cap)>0}
+function runInt(){
+  var t=today(),changed=false;
+  S.pos.forEach(function(p){
+    if(ACC.indexOf(p.tipo)<0)return;
+    if(!p.accDa){p.accDa=t;changed=true;return}
+    var n=dnum(t)-dnum(p.accDa);if(n<=0)return;if(n>400)n=400;
+    for(var i=0;i<n;i++){
+      if(!accrues(p))break;
+      var d=tEff(p)/100/365,c0=num(p.cap),inc;
+      if(p.tipo==='staking'){
+        if(num(p.qty)>0&&p.cg){p.qty=num(p.qty)*(1+d);inc=p.px>0?num(p.qty)*p.px-c0:c0*d;p.cap=c0+inc}
+        else{inc=c0*d;p.cap=c0+inc}
+      }else{inc=c0*d*(1-num(p.tassa)/100);p.cap=c0+inc}
+      p.intTot=num(p.intTot)+inc;
+    }
+    p.cap=r2(p.cap);p.intTot=r2(num(p.intTot));if(num(p.qty)>0)p.qty=Math.round(num(p.qty)*1e8)/1e8;
+    p.accDa=t;p.agg=t;changed=true;
+  });
+  if(changed)save();
+}
+function intOggi(){return sum(S.pos,function(p){if(!accrues(p)||ACC.indexOf(p.tipo)<0)return 0;var d=num(p.cap)*tEff(p)/100/365;return p.tipo==='staking'?d:d*(1-num(p.tassa)/100)})}
+function intTotale(){return sum(S.pos,function(p){return num(p.intTot)})}
 function runPac(){
   var now=new Date(),ty=now.getFullYear(),tm=now.getMonth(),td=now.getDate(),changed=false,msgs=[];
   S.pos.forEach(function(p){
@@ -693,7 +720,7 @@ function fDett(id){
       r('Pagato da',src?esc(src.nome):'non scalato da nessun saldo')+'</div>';
   }
   var net=cap*(tEff(p)-num(p.costi))/100*(1-num(p.tassa)/100)/12;
-  h+='<div class="card"><h2>Rendimento ipotizzato</h2>'+r('Tasso lordo annuo',pc(num(p.tasso)))+(num(p.costi)?r('Costi annui',pc(num(p.costi))):'')+r('Tasse sul guadagno',pc(num(p.tassa)))+r('Crescita netta stimata al mese',eur2(net))+
+  h+=(num(p.intTot)>0?'<div class="card"><h2>Interessi accreditati dall\'app</h2>'+r('Totale da quando li segna',eur2(num(p.intTot)))+(accrues(p)&&ACC.indexOf(p.tipo)>=0?r('Oggi circa',eur2(num(p.cap)*tEff(p)/100/365*(p.tipo==='staking'?1:1-num(p.tassa)/100))):'')+'</div>':'')+'<div class="card"><h2>Rendimento ipotizzato</h2>'+r('Tasso lordo annuo',pc(num(p.tasso)))+(num(p.costi)?r('Costi annui',pc(num(p.costi))):'')+r('Tasse sul guadagno',pc(num(p.tassa)))+r('Crescita netta stimata al mese',eur2(net))+
     '<div class="note">'+(p.bloccato?'Vincolato fino alla scadenza. ':'')+(p.variabile?'Tasso variabile: può cambiare. ':'')+'Sono ipotesi tue, non garanzie.</div></div>';
   var T=yearsTo(p);
   if(p.scad){var v=valueAt(p,T);h+='<div class="card"><h2>A scadenza</h2>'+r('Scadenza',esc(dt(p.scad)))+r('Netto stimato',eur2(v.netto))+r('Guadagno netto stimato',eur2(v.netto-v.inv))+'</div>'}
@@ -714,8 +741,8 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runPac();render();refreshPrezzi();importFromHash();
-document.addEventListener('visibilitychange',function(){if(!document.hidden){if(runPac())render();refreshPrezzi()}});
+load();runInt();runPac();render();refreshPrezzi();importFromHash();
+document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 </script>
