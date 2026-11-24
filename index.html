@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.3',APP_DATE='24 nov 2026';
+var APP_VERSION='2.4',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.4','Carburante: litri, importo e km a ogni pieno, con prezzo al litro, consumo e km per pieno'],
  ['2.3','Le uscite fisse scalano da sole il saldo del conto nel giorno di addebito e contano nel cashback'],
  ['2.2','Abitudini di spesa (tabacco, carburante...): un tocco per registrarle quando succedono e avviso se passa troppo tempo'],
  ['2.1','Interessi automatici ogni giorno su conti, cash e staking, con il totale maturato e la stima al giorno'],
@@ -524,7 +525,7 @@ function vSpese(){
   if(!S.mov.some(function(m){return m.d===today()&&m.t==='out'})&&!S.nos[today()]){
     h+='<div class="card alert"><b>Oggi non hai registrato spese</b>Hai speso qualcosa?<div class="acts"><button class="mini" onclick="fSpesa()">Registra una spesa</button><button class="mini" onclick="noSpese()">Oggi non ho speso</button></div></div>';
   }
-  h+=abitCard();
+  h+=abitCard()+carbCard();
   h+=proxCard();
   if(tu>0){
     var byC={};M.forEach(function(m){if(m.t==='out')byC[m.cat]=(byC[m.cat]||0)+num(m.imp)});
@@ -551,12 +552,25 @@ function vSpese(){
 }
 function noSpese(){S.nos[today()]=1;save();render()}
 function ultimaSpesa(cat){var d='';S.mov.forEach(function(m){if(m.t==='out'&&m.cat===cat&&m.d>d)d=m.d});return d}
+function ultKm(){var k=0,d='';S.mov.forEach(function(m){if(m.cat==='Carburante'&&num(m.km)>0&&m.d>=d){d=m.d;k=num(m.km)}});return k}
+function carbCard(){
+  var F=S.mov.filter(function(m){return m.cat==='Carburante'&&num(m.lit)>0}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0});
+  if(!F.length)return '';
+  var serb=num(S.set.serb)||40,L=0,D=0,E=0,dist=[];
+  for(var i=1;i<F.length;i++){var a=F[i-1],b=F[i];if(num(a.km)>0&&num(b.km)>num(a.km)){var dd=num(b.km)-num(a.km);L+=num(b.lit);D+=dd;E+=num(b.imp);dist.push(dd)}}
+  var tl=sum(F,function(m){return num(m.lit)}),te=sum(F,function(m){return num(m.imp)});
+  var row=function(a,b){return '<div class="row"><span class="mu">'+a+'</span><b>'+b+'</b></div>'};
+  var h='<div class="sechead"><h2>Carburante</h2></div><div class="card">'+row('Ultimo pieno',esc(eur2(num(F[F.length-1].imp)))+' \u00b7 '+esc(F[F.length-1].lit.toLocaleString('it-IT'))+' L')+row('Prezzo medio al litro',esc(eur2(te/tl)));
+  if(D>0){var l100=L/D*100;h+=row('Consumo',esc(l100.toFixed(1).replace('.',','))+' L/100 km')+row('Km per pieno (media)',esc(fmtInt(D/dist.length))+' km')+row('Autonomia con '+serb+' L',esc(fmtInt(serb/l100*100))+' km')+row('Costo ogni 100 km',esc(eur2(E/D*100)))}
+  else h+='<div class="note">Inserisci i km del contachilometri a ogni pieno e vedrai consumo e km per pieno.</div>';
+  return h+'<div class="note">'+F.length+(F.length===1?' pieno registrato':' pieni registrati')+'</div></div>';
+}
 function abitCard(){
   var R=S.ric||[];var h='<div class="sechead"><h2>Abitudini</h2></div><div class="card">';
   if(!R.length)h+='<div class="mu">Aggiungi le spese che fai ogni tanto, come tabacco o carburante: le registri con un tocco quando succedono.</div>';
   R.forEach(function(r){
     var u=ultimaSpesa(r.cat),gg=u?dnum(today())-dnum(u):null,late=gg==null||gg>=num(r.ogni);
-    h+='<div class="row" style="padding:8px 0"><div><b>'+esc(r.nome)+'</b><div class="mu" style="font-size:12px">'+(gg==null?'mai registrata':(gg===0?'oggi':'ultima '+gg+(gg===1?' giorno fa':' giorni fa')))+' \u00b7 di solito ogni '+esc(num(r.ogni))+' giorni'+(late&&gg!=null?' \u00b7 <span style="color:var(--ok)">\u00e8 ora</span>':'')+'</div></div><span><button class="mini" onclick="fSpesa({cat:\''+esc(r.cat)+'\',nota:\''+esc(r.nome).replace(/'/g,'')+'\',imp:\''+esc(r.imp||'')+'\'})">Registra</button> <button class="mini" onclick="fRic(\''+esc(r.id)+'\')">\u270e</button></span></div>'});
+    h+='<div class="row" style="padding:8px 0"><div><b>'+esc(r.nome)+'</b><div class="mu" style="font-size:12px">'+(gg==null?'mai registrata':(gg===0?'oggi':'ultima '+gg+(gg===1?' giorno fa':' giorni fa')))+' \u00b7 di solito ogni '+esc(num(r.ogni))+' giorni'+(late&&gg!=null?' \u00b7 <span style="color:var(--ok)">\u00e8 ora</span>':'')+'</div></div><span><button class="mini" onclick="fSpesa({cat:\''+esc(r.cat)+'\',nota:\''+esc(r.nome).replace(/'/g,'')+'\',imp:\''+esc(r.imp||'')+'\''+(r.cat==='Carburante'?',carb:true':'')+'})">Registra</button> <button class="mini" onclick="fRic(\''+esc(r.id)+'\')">\u270e</button></span></div>'});
   return h+'<div class="acts"><button class="mini" onclick="fRic()">+ Nuova abitudine</button></div></div>';
 }
 function fRic(id){
@@ -575,7 +589,7 @@ function fSpesa(pre){pre=pre||{};
   var sel='<select id="s_da"><option value="">Contanti o altro (non scalare)</option>'+opts.map(function(p){return '<option value="'+esc(p.id)+'"'+(cp&&p.id===cp.id?' selected':'')+'>'+esc(p.nome)+' ('+esc(eur(num(p.cap)))+')</option>'}).join('')+'</select>';
   sheetOpen('Nuova spesa','<label>Importo (€)</label><input id="s_imp" inputmode="decimal" placeholder="0" value="'+esc(pre.imp||'')+'">'+
    '<label>Categoria</label><select id="s_cat">'+CAT.map(function(c){return '<option'+(c===pre.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'+
-   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+
+   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+(pre.carb?'<div class="two"><div><label>Litri messi</label><input id="s_lit" inputmode="decimal" placeholder="0"></div><div><label>Km totali (contachilometri)</label><input id="s_km" inputmode="numeric" placeholder="'+esc(ultKm()||'')+'"></div></div><div class="note">Con il pieno ogni volta, litri e km ti danno consumo e km per pieno. I km sono facoltativi.</div>':'')+
    '<label>Data</label><input id="s_d" type="date" value="'+today()+'">'+
    '<label>Pagata da</label>'+sel+
    '<div class="note">Il saldo scelto viene scalato. Con il cash Trade Republic il cashback è calcolato in automatico.</div>'+btns('doSpesa()','Salva'));
@@ -583,7 +597,7 @@ function fSpesa(pre){pre=pre||{};
 function doSpesa(){
   var imp=num(g_('s_imp'));if(imp<=0){document.getElementById('s_imp').focus();return}
   var d=g_('s_d')||today(),da=g_('s_da'),p=da?findP(da):null;
-  S.mov.push({id:uid(),d:d,t:'out',imp:r2(imp),cat:g_('s_cat'),nota:g_('s_nota').trim(),da:p?p.id:'',cb:!!(p&&p.piatt==='Trade Republic')});
+  var mv={id:uid(),d:d,t:'out',imp:r2(imp),cat:g_('s_cat'),nota:g_('s_nota').trim(),da:p?p.id:'',cb:!!(p&&p.piatt==='Trade Republic')};var le=document.getElementById('s_lit');if(le&&num(le.value)>0){mv.lit=num(le.value);var ke=num(g_('s_km'));if(ke>0)mv.km=ke}S.mov.push(mv);
   if(p){p.cap=Math.max(0,r2(num(p.cap)-imp));p.agg=today()}
   if(d===today())delete S.nos[d];
   save();closeForm();render();
