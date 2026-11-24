@@ -17,6 +17,7 @@ html{color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:92px;font-variant-numeric:tabular-nums}
 header{padding:calc(env(safe-area-inset-top) + 18px) 18px 4px}
 h1{font-size:19px;font-weight:600;margin:0;letter-spacing:.2px}
+.ver{display:inline-block;font-size:11.5px;color:var(--ac2);background:#d4a84f1f;border:1px solid #d4a84f40;border-radius:20px;padding:2px 10px;margin-bottom:6px}
 .sub{color:var(--mu);font-size:12.5px;margin-top:2px}
 main{padding:8px 14px 24px;max-width:720px;margin:0 auto}
 .card{background:var(--card);border:1px solid var(--ln);border-radius:var(--r);padding:15px;margin:12px 0}
@@ -92,7 +93,7 @@ pre.ai{white-space:pre-wrap;font:inherit;margin:8px 0 0}
 </style>
 </head>
 <body>
-<header><h1>Il mio portafoglio</h1><div class="sub" id="sub"></div></header>
+<header><div class="ver" id="ver"></div><h1>Il mio portafoglio</h1><div class="sub" id="sub"></div></header>
 <main id="main"></main>
 <nav id="nav"></nav>
 <div id="modal" hidden></div>
@@ -100,6 +101,13 @@ pre.ai{white-space:pre-wrap;font:inherit;margin:8px 0 0}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
+var APP_VERSION='1.3',APP_DATE='24 nov 2026';
+var CHANGELOG=[
+ ['1.3','Versione visibile in alto a sinistra e storico delle versioni'],
+ ['1.2','Rimossi i dati di esempio: solo i tuoi dati'],
+ ['1.1','Nuova grafica scura: curva di crescita, ciambella, card per piattaforma, scadenze in evidenza'],
+ ['1.0','Prima versione installabile: schede, scadenze, proiezioni nette, sposta soldi, rinnova blocco, backup']
+];
 var TIPI={
  buono:{n:'Buono postale / titolo di Stato',cl:'Sicuri',tax:12.5},
  conto:{n:'Conto o portafoglio remunerato',cl:'Sicuri',tax:26},
@@ -315,6 +323,7 @@ function vDati(){
    '<div class="card"><h2>Backup</h2><div class="mu">Ogni modifica si salva da sola su questo dispositivo, senza account e senza internet. Se cancelli i dati del browser o disinstalli l\'app i dati si perdono: scarica ogni tanto il file di backup.</div>'+
    '<p><button class="pri" onclick="doDownload()">Scarica file di backup</button> <button class="sec" onclick="doCopy()">Copia testo</button></p><label>Ripristina da file</label><input type="file" accept=".json,application/json" onchange="doFile(this)"><label>Incolla qui un backup per ripristinarlo</label><textarea id="imp" rows="4"></textarea>'+
    '<p><button class="sec" onclick="doImport()">Ripristina da backup</button> <button class="dan" onclick="doReset()">Cancella tutto</button></p><div id="bkMsg" class="note"></div></div>'+
+   '<div class="card"><h2>Versioni dell\'app</h2>'+CHANGELOG.map(function(c){return '<div class="logr"><span><b>v'+esc(c[0])+'</b> \u00b7 '+esc(c[1])+'</span></div>'}).join('')+'</div>'+
    '<div class="card"><h2>Ultime operazioni</h2>'+(S.log.length?S.log.slice().reverse().slice(0,30).map(function(l){return '<div class="logr"><span>'+esc(l.t)+'</span><span class="mu">'+esc(dt(l.d))+'</span></div>'}).join(''):'<div class="mu">Nessuna operazione registrata.</div>')+'</div>'+
    '<div class="note" style="padding:0 6px">Strumento di calcolo personale: non è una consulenza finanziaria. Le aliquote sono modificabili; verifica sempre quelle in vigore.</div>';
 }
@@ -322,6 +331,7 @@ function vDati(){
 /* ===== azioni ===== */
 function render(){
   var ag=animGrowth;
+  var ve=document.getElementById('ver');if(ve)ve.textContent='v'+APP_VERSION+' \u00b7 '+APP_DATE;
   setSub();
   var m=document.getElementById('main');
   m.innerHTML={quadro:vQuadro,pos:vPos,scad:vScad,cons:vCons,dati:vDati}[tab]();
