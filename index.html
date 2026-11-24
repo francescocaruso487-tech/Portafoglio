@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='2.2',APP_DATE='24 nov 2026';
+var APP_VERSION='2.3',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['2.3','Le uscite fisse scalano da sole il saldo del conto nel giorno di addebito e contano nel cashback'],
  ['2.2','Abitudini di spesa (tabacco, carburante...): un tocco per registrarle quando succedono e avviso se passa troppo tempo'],
  ['2.1','Interessi automatici ogni giorno su conti, cash e staking, con il totale maturato e la stima al giorno'],
  ['2.0','Tetto del tasso alto (es. Revolut 3.000 \u20ac): rendimento calcolato a livelli e avviso per spostare il sovrappi\u00f9 su Trade Republic'],
@@ -445,7 +446,7 @@ function importFromHash(){
   try{var b=m[1].replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
     var o=JSON.parse(decodeURIComponent(escape(atob(b))));if(!o||typeof o!=='object')throw 0;
     var arr=Array.isArray(o)?o:(Array.isArray(o.pos)?o.pos:[]),fx=(!Array.isArray(o)&&Array.isArray(o.fisse))?o.fisse:[];
-    var rc=(!Array.isArray(o)&&Array.isArray(o.ric))?addRic(o.ric):0;var r=addPositions(arr),rf=addFisse(fx);runPac();setTimeout(function(){refreshPrezzi(true)},300);tab=((rf.n||rc)&&!r.n)?'spese':'pos';render();
+    var rc=(!Array.isArray(o)&&Array.isArray(o.ric))?addRic(o.ric):0;var r=addPositions(arr),rf=addFisse(fx);runFisse();runPac();setTimeout(function(){refreshPrezzi(true)},300);tab=((rf.n||rc)&&!r.n)?'spese':'pos';render();
     var pt=[];if(r.n)pt.push('aggiunte '+r.n+(r.n===1?' posizione':' posizioni'));if(rf.n)pt.push('aggiunte '+rf.n+(rf.n===1?' uscita fissa':' uscite fisse'));if(rc)pt.push('aggiunte '+rc+(rc===1?' abitudine di spesa':' abitudini di spesa'));if(r.up)pt.push('impostati i versamenti automatici di '+r.up+(r.up===1?' posizione':' posizioni'));
     var tx=pt.join(', ');toast(pt.length?(tx.charAt(0).toUpperCase()+tx.slice(1)+'.'+((r.sk+rf.sk)?' ('+(r.sk+rf.sk)+' già presenti)':'')):'Erano già presenti.');
   }catch(e){toast('Link di importazione non valido.')}
@@ -512,7 +513,7 @@ function vSpese(){
   var ent=sum(M,function(m){return m.t==='in'?num(m.imp):0});
   var usc=sum(M,function(m){return m.t==='out'?num(m.imp):0});
   var fx=fisseMese(),tu=usc+fx;
-  var cb=sum(M,function(m){return m.t==='out'&&m.cb?num(m.imp):0})*num(S.set.cashback)/100;
+  var cb=(sum(M,function(m){return m.t==='out'&&m.cb?num(m.imp):0})+sum(S.fisse,function(f){return f.piatt==='Trade Republic'?(f.freq==='anno'?num(f.imp)/12:num(f.imp)):0}))*num(S.set.cashback)/100;
   var h=bannerStip();
   h+='<div class="hero"><div class="lab">Uscite del mese</div><div class="tot">'+esc(fmtInt(tu))+'<small>€</small></div><div class="pills">'+
    '<span class="pill">'+esc(eur(usc))+' spese + '+esc(eur(fx))+' fisse</span>'+
@@ -633,14 +634,14 @@ function fFissa(id){
 }
 function saveFissa(id,isNew){
   var nome=g_('x_nome').trim();if(!nome){document.getElementById('x_nome').focus();return}
-  var o={id:id,nome:nome,imp:num(g_('x_imp')),freq:g_('x_freq'),giorno:g_('x_g')===''?'':Math.min(31,Math.max(1,Math.round(num(g_('x_g'))))),cat:g_('x_cat'),piatt:g_('x_piatt')};
+  var o={id:id,nome:nome,imp:num(g_('x_imp')),freq:g_('x_freq'),giorno:g_('x_g')===''?'':Math.min(31,Math.max(1,Math.round(num(g_('x_g'))))),cat:g_('x_cat'),piatt:g_('x_piatt'),ult:(S.fisse.filter(function(x){return x.id===id})[0]||{}).ult||''};
   if(isNew)S.fisse.push(o);else S.fisse=S.fisse.map(function(x){return x.id===id?o:x});
   save();closeForm();render();
 }
 function delFissa(id){S.fisse=S.fisse.filter(function(x){return x.id!==id});save();closeForm();render()}
 function addFisse(arr){
   var n=0,sk=0;arr.forEach(function(x){
-    var c={id:uid(),nome:String(x.nome||'Senza nome'),imp:num(x.imp),freq:x.freq==='anno'?'anno':'mese',giorno:x.giorno===''||x.giorno==null?'':Math.min(31,Math.max(1,Math.round(num(x.giorno)))),cat:CAT.indexOf(x.cat)>=0?x.cat:'Altro',piatt:String(x.piatt||'Altro')};
+    var c={id:uid(),nome:String(x.nome||'Senza nome'),imp:num(x.imp),freq:x.freq==='anno'?'anno':'mese',giorno:x.giorno===''||x.giorno==null?'':Math.min(31,Math.max(1,Math.round(num(x.giorno)))),cat:CAT.indexOf(x.cat)>=0?x.cat:'Altro',piatt:String(x.piatt||'Altro'),ult:''};
     var dup=S.fisse.some(function(q){return q.nome===c.nome&&num(q.imp)===c.imp});if(dup){sk++;return}S.fisse.push(c);n++});
   if(n)save();return {n:n,sk:sk};
 }
@@ -690,6 +691,26 @@ function runInt(){
 }
 function intOggi(){return sum(S.pos,function(p){if(!accrues(p)||ACC.indexOf(p.tipo)<0)return 0;var d=num(p.cap)*tEff(p)/100/365;return p.tipo==='staking'?d:d*(1-num(p.tassa)/100)})}
 function intTotale(){return sum(S.pos,function(p){return num(p.intTot)})}
+function payPos(f){if(f.piatt==='Trade Republic')return cashPos();return S.pos.filter(function(p){return p.piatt===f.piatt&&(p.tipo==='conto'||p.tipo==='fermi')})[0]||null}
+function runFisse(){
+  var now=new Date(),ty=now.getFullYear(),tm=now.getMonth(),td=now.getDate(),changed=false;
+  S.fisse.forEach(function(f){
+    var g=num(f.giorno);if(f.freq==='anno'||!(g>=1)||!(num(f.imp)>0))return;
+    var dueNow=td>=Math.min(g,pmonthLen(ty,tm));
+    if(!f.ult){f.ult=dueNow?pacKey(ty,tm):pacKey(ty,tm-1);changed=true;return}
+    var y=+f.ult.slice(0,4),m=+f.ult.slice(5,7)-1;
+    for(var guard=0;guard<36;guard++){
+      m++;if(m>11){m=0;y++}
+      if(y>ty||(y===ty&&m>tm))break;
+      if(y===ty&&m===tm&&!dueNow)break;
+      var p=payPos(f),low=false;
+      if(p){low=num(p.cap)<num(f.imp);p.cap=Math.max(0,r2(num(p.cap)-num(f.imp)));p.agg=today()}
+      f.ult=pacKey(y,m);changed=true;
+      logOp('Addebito '+f.nome+': -'+eur2(num(f.imp))+(p?' da '+p.nome:'')+(low?' (saldo insufficiente: controlla)':''));
+    }
+  });
+  if(changed)save();
+}
 function runPac(){
   var now=new Date(),ty=now.getFullYear(),tm=now.getMonth(),td=now.getDate(),changed=false,msgs=[];
   S.pos.forEach(function(p){
@@ -763,8 +784,8 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runInt();runPac();render();refreshPrezzi();importFromHash();
-document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();if(runPac())render();else render();refreshPrezzi()}});
+load();runInt();runFisse();runPac();render();refreshPrezzi();importFromHash();
+document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
 </script>
