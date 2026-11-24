@@ -102,8 +102,9 @@ button.pri.sm,.acts2 button{margin:0}.acts2{display:flex;gap:8px;flex-wrap:wrap;
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.0',APP_DATE='24 nov 2026';
+var APP_VERSION='3.1',APP_DATE='24 nov 2026';
 var CHANGELOG=[
+ ['3.1','Carburante: segna l\u2019autonomia prima e dopo il pieno, l\u2019app stima i km fatti tra un pieno e l\u2019altro. Consigli: avviso automatico se c\u2019\u00e8 un\u2019offerta che rende pi\u00f9 di una tua posizione'],
  ['3.0','Nuova funzione "Dove li metto?" in Consigli: scegli importo, durata e rischio e ti mostra dove rende di pi\u00f9 al netto, anche fuori dalle tue piattaforme'],
  ['2.9','Tocca qualsiasi numero, piattaforma, avviso o spesa per un pop-up con i dettagli e il calcolo'],
  ['2.8','Cripto con prezzo automatico: i piani mensili aumentano anche la quantit\u00e0, cos\u00ec il valore resta corretto'],
@@ -423,9 +424,14 @@ function consigli(){
   return A;
 }
 
+function offAlerts(){
+  var A=[];if(!OFF||!OFF.offerte)return A;var lp=liquidPos().map(function(p){return {p:p,n:posNet(p)}}).sort(function(a,b){return b.n-a.n});
+  lp.forEach(function(x){var cap=num(x.p.cap),bo=null;OFF.offerte.forEach(function(o){if(o.rischio>2||o.mesi>12||cap<(o.min||0))return;if(o.promoFine&&monthsTo(o.promoFine)<=0)return;var c=offCalc(o,cap,12);var up=c.port*(c.nr-x.n)/100;if(up>=20&&(!bo||up>bo.up))bo={o:o,up:up,port:c.port}});
+    if(bo)A.push({t:'Offerta migliore per '+x.p.nome,x:bo.o.nome+' ('+bo.o.emittente+') rende circa '+eur(bo.up)+' netti all\u2019anno in pi\u00f9 su '+eur(bo.port)+(bo.o.mesi?', con vincolo di '+bo.o.mesi+' mesi':', senza vincolo')+(bo.o.promoFine?'. Promo fino al '+new Date(bo.o.promoFine+'T12:00:00').toLocaleDateString('it-IT'):'')+(bo.o.ok?'':' (dato da verificare)')+'.',up:bo.up})});
+  A.sort(function(a,b){return b.up-a.up});return A.slice(0,3)}
 function vCons(){
   var dmc='<div class="card"><h2>Dove li metto?</h2><div class="mu">Hai ricevuto dei soldi o vuoi spostarli? Scegli importo, durata e rischio: ti mostro le offerte che rendono di pi\u00f9 al netto di tasse e bollo, anche di altre banche.</div><p><button class="pri" onclick="openDM()">Apri</button></p></div>';
-  var h=dmc+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
+  var h=dmc+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
   if(!S.pos.length)return dmc+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
@@ -747,14 +753,14 @@ function ultKm(){var k=0,d='';S.mov.forEach(function(m){if(m.cat==='Carburante'&
 function carbCard(){
   var F=S.mov.filter(function(m){return m.cat==='Carburante'&&num(m.lit)>0}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0});
   if(!F.length)return '';
-  var serb=num(S.set.serb)||40,L=0,D=0,E=0,dist=[];
-  for(var i=1;i<F.length;i++){var a=F[i-1],b=F[i];if(!a.nf&&!b.nf&&num(a.km)>0&&num(b.km)>num(a.km)){var dd=num(b.km)-num(a.km);L+=num(b.lit);D+=dd;E+=num(b.imp);dist.push(dd)}}
+  var serb=num(S.set.serb)||40,L=0,D=0,E=0,dist=[],est=0;
+  for(var i=1;i<F.length;i++){var a=F[i-1],b=F[i];if(!a.nf&&!b.nf&&num(a.km)>0&&num(b.km)>num(a.km)){var dd=num(b.km)-num(a.km);L+=num(b.lit);D+=dd;E+=num(b.imp);dist.push(dd)}else if(!a.nf&&!b.nf&&num(a.ad)>0&&b.au!=null&&num(b.au)>=0&&num(a.ad)>num(b.au)){var de=num(a.ad)-num(b.au);L+=num(b.lit);D+=de;E+=num(b.imp);dist.push(de);est++}}
   var tl=sum(F,function(m){return num(m.lit)}),te=sum(F,function(m){return num(m.imp)});
   var row=function(a,b){return '<div class="row"><span class="mu">'+a+'</span><b>'+b+'</b></div>'};
   var h='<div class="sechead"><h2>Carburante</h2></div><div class="card">'+row('Ultimo pieno',esc(eur2(num(F[F.length-1].imp)))+' \u00b7 '+esc(F[F.length-1].lit.toLocaleString('it-IT'))+' L')+row('Prezzo medio al litro',esc(eur2(te/tl)));
   if(D>0){var l100=L/D*100;h+=row('Consumo',esc(l100.toFixed(1).replace('.',','))+' L/100 km')+row('Km per pieno (media)',esc(fmtInt(D/dist.length))+' km')+row('Autonomia con '+serb+' L',esc(fmtInt(serb/l100*100))+' km')+row('Costo ogni 100 km',esc(eur2(E/D*100)))}
-  else h+='<div class="note">Inserisci i km del contachilometri a ogni pieno e vedrai consumo e km per pieno.</div>';
-  return h+'<div class="note">'+F.length+(F.length===1?' pieno registrato':' pieni registrati')+'</div></div>';
+  else h+='<div class="note">Inserisci i km del contachilometri, oppure l\u2019autonomia prima e dopo il pieno, e vedrai consumo e km per pieno.</div>';
+  return h+'<div class="note">'+F.length+(F.length===1?' pieno registrato':' pieni registrati')+(est?' \u00b7 '+est+(est===1?' tratta stimata':' tratte stimate')+' dall\u2019autonomia dell\u2019auto (approssimata)':'')+'</div></div>';
 }
 function abitCard(){
   var R=S.ric||[];var h='<div class="sechead"><h2>Abitudini</h2></div><div class="card">';
@@ -780,7 +786,7 @@ function fSpesa(pre){pre=pre||{};
   var sel='<select id="s_da"><option value="">Contanti o altro (non scalare)</option>'+opts.map(function(p){return '<option value="'+esc(p.id)+'"'+(cp&&p.id===cp.id?' selected':'')+'>'+esc(p.nome)+' ('+esc(eur(num(p.cap)))+')</option>'}).join('')+'</select>';
   sheetOpen('Nuova spesa','<label>Importo (€)</label><input id="s_imp" inputmode="decimal" placeholder="0" value="'+esc(pre.imp||'')+'">'+
    '<label>Categoria</label><select id="s_cat">'+CAT.map(function(c){return '<option'+(c===pre.cat?' selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select>'+
-   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+(pre.carb?'<div class="two"><div><label>Litri messi</label><input id="s_lit" inputmode="decimal" placeholder="0"></div><div><label>Km totali (contachilometri)</label><input id="s_km" inputmode="numeric" placeholder="'+esc(ultKm()||'')+'"></div></div><div class="chk"><input type="checkbox" id="s_nf"><span>Non ho fatto il pieno completo</span></div><div class="note">Con il pieno ogni volta, litri e km ti danno consumo e km per pieno, qualunque sia il carburante rimasto prima. I km sono facoltativi.</div>':'')+
+   '<label>Nota (facoltativa)</label><input id="s_nota" placeholder="es. pieno" value="'+esc(pre.nota||'')+'">'+(pre.carb?'<div class="two"><div><label>Litri messi</label><input id="s_lit" inputmode="decimal" placeholder="0"></div><div><label>Km totali (contachilometri)</label><input id="s_km" inputmode="numeric" placeholder="'+esc(ultKm()||'')+'"></div></div><div class="two"><div><label>Autonomia prima del pieno (km)</label><input id="s_au" inputmode="numeric" placeholder="es. 75"></div><div><label>Autonomia dopo il pieno (km)</label><input id="s_ad" inputmode="numeric" placeholder="es. 650"></div></div><div class="chk"><input type="checkbox" id="s_nf"><span>Non ho fatto il pieno completo</span></div><div class="note">Con il pieno ogni volta, litri e km ti danno consumo e km per pieno, qualunque sia il carburante rimasto prima. I km sono facoltativi.</div>':'')+
    '<label>Data</label><input id="s_d" type="date" value="'+today()+'">'+
    '<label>Pagata da</label>'+sel+
    '<div class="note">Il saldo scelto viene scalato. Con il cash Trade Republic il cashback è calcolato in automatico.</div>'+btns('doSpesa()','Salva'));
@@ -788,7 +794,7 @@ function fSpesa(pre){pre=pre||{};
 function doSpesa(){
   var imp=num(g_('s_imp'));if(imp<=0){document.getElementById('s_imp').focus();return}
   var d=g_('s_d')||today(),da=g_('s_da'),p=da?findP(da):null;
-  var mv={id:uid(),d:d,t:'out',imp:r2(imp),cat:g_('s_cat'),nota:g_('s_nota').trim(),da:p?p.id:'',cb:!!(p&&p.piatt==='Trade Republic')};var le=document.getElementById('s_lit');if(le&&num(le.value)>0){mv.lit=num(le.value);var ke=num(g_('s_km'));if(ke>0)mv.km=ke;if(document.getElementById('s_nf').checked)mv.nf=true}S.mov.push(mv);
+  var mv={id:uid(),d:d,t:'out',imp:r2(imp),cat:g_('s_cat'),nota:g_('s_nota').trim(),da:p?p.id:'',cb:!!(p&&p.piatt==='Trade Republic')};var le=document.getElementById('s_lit');if(le&&num(le.value)>0){mv.lit=num(le.value);var ke=num(g_('s_km'));if(ke>0)mv.km=ke;var au=num(g_('s_au')),ad=num(g_('s_ad'));if(au>0)mv.au=au;if(ad>0)mv.ad=ad;if(document.getElementById('s_nf').checked)mv.nf=true}S.mov.push(mv);
   if(p){p.cap=Math.max(0,r2(num(p.cap)-imp));p.agg=today()}
   if(d===today())delete S.nos[d];
   save();closeForm();render();
@@ -1005,7 +1011,7 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runInt();runFisse();runPac();render();refreshPrezzi();loadOff();try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();
+load();runInt();runFisse();runPac();render();refreshPrezzi();loadOff(function(){if(tab==='cons')render()});try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();
 document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
