@@ -109,6 +109,25 @@ async function annunciTesoro(leggi, stato, oggi) {
   return avvisi;
 }
 
+async function sentinelle(leggi, stato, oggi) {
+  const avvisi = [];
+  stato.sentinelle = stato.sentinelle || {};
+  for (const s of SCOPERTA.sentinelle || []) {
+    const pg = await leggi(s.url);
+    if (!pg) { console.log(`sentinella ${s.id}: PAGINA NON LETTA`); continue; }
+    const set = [...new Set([...pg.testo.matchAll(/\d{1,2},\d{1,2} ?%/g)].map(m => m[0].replace(' ', '')))].sort();
+    if (!set.length) { console.log(`sentinella ${s.id}: nessun tasso in pagina`); continue; }
+    const firma = set.join(' ');
+    const prima = stato.sentinelle[s.id];
+    console.log(`sentinella ${s.id}: ${firma}`);
+    if (!prima) { stato.sentinelle[s.id] = { firma, data: oggi }; continue; }
+    if (prima.firma === firma) continue;
+    L.aggiungiControllo(stato.controlli, { chiave: 'sent:' + s.id + ':' + firma, titolo: s.nome + ': i tassi in pagina sono cambiati (' + set.slice(0, 6).join(', ') + ')', url: s.url }, oggi);
+    avvisi.push({ id: s.id, firma, msg: { title: s.nome + ': tassi cambiati in pagina', body: 'Ora: ' + set.slice(0, 6).join(', ') + ' · verifica sul sito', tag: 'sent-' + s.id, url: './#offerte' } });
+  }
+  return avvisi;
+}
+
 (async () => {
   const oggi = L.dataRoma();
   const catalogo = JSON.parse(fs.readFileSync(F_CAT, 'utf8'));
@@ -128,6 +147,7 @@ async function annunciTesoro(leggi, stato, oggi) {
   L.applica(catalogo, REGOLE, letture, oggi, stato.controlli);
   await nuoviBuoni(leggi, catalogo, stato, oggi);
   const avvisi = await annunciTesoro(leggi, stato, oggi);
+  const sent = await sentinelle(leggi, stato, oggi);
   await browser.close();
 
   const limite = L.dataRoma(new Date(Date.now() - 30 * 864e5));
@@ -144,11 +164,13 @@ async function annunciTesoro(leggi, stato, oggi) {
   try { config = leggiConfig(process.env.PUSH_CONFIG); } catch (e) { errore = e.message; }
   for (const o of nuove) console.log(`DA NOTIFICARE: ${o.id} ${o.tasso}`);
   for (const a of avvisi) console.log(`DA NOTIFICARE: ${a.msg.title}`);
+  for (const a of sent) console.log(`DA NOTIFICARE: ${a.msg.title}`);
   if (!config && !errore) console.log('::warning::Secret PUSH_CONFIG non impostato: le notifiche restano in attesa.');
   if (config) {
     try {
       for (const o of nuove) { await invia(config, L.messaggio(o, stato.notificate[o.id]), 72); stato.notificate[o.id] = o.tasso; }
       for (const a of avvisi) { await invia(config, a.msg, 72); stato.annunci[a.url] = oggi; }
+      for (const a of sent) { await invia(config, a.msg, 72); stato.sentinelle[a.id] = { firma: a.firma, data: oggi }; }
     } catch (e) { errore = e.message; }
   }
 

@@ -109,6 +109,14 @@ const SCOPERTA = {
   poste: [POSTE, 'https://buonielibretti.poste.it/'],
   posteNoti: ['buono-premium-4-anni', 'buono-per-un-buono-6-mesi', 'buono-a-cedola-8-anni', 'buono-4-anni-risparmiosemplice', 'buono-4-anni-plus', 'buono-ordinario',
     'buono-3x4-con-premio', 'buono-rinnova-3x4-con-premio', 'buono-soluzione-eredita', 'buono-minori'],
-  tesoro: DT
+  tesoro: DT,
+  // pagine senza regola precisa: si guardano i tassi (%) scritti in pagina e si avvisa quando l'insieme cambia
+  sentinelle: [
+    { id: 'bbva', nome: 'BBVA', url: 'https://www.bbva.it/' },
+    { id: 'guber', nome: 'Banca Guber', url: 'https://www.bancaguber.it/' },
+    { id: 'revolut', nome: 'Revolut', url: 'https://www.revolut.com/it-IT/savings/' },
+    { id: 'trade-republic', nome: 'Trade Republic', url: 'https://traderepublic.com/it-it/interessi' },
+    { id: 'confronto-depositi', nome: 'Confronto conti deposito (Facile.it)', url: 'https://www.facile.it/conti-deposito.html' }
+  ]
 };
 module.exports = { REGOLE, SCOPERTA, LORDO, PREMIO, iso, n };
