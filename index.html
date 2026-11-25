@@ -131,8 +131,9 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.4',APP_DATE='25 nov 2026';
+var APP_VERSION='3.5',APP_DATE='25 nov 2026';
 var CHANGELOG=[
+ ['3.5','Le offerte riservate ad altri (minori, eredi, nuovi clienti) non compaiono pi\u00f9 tra le tue; avvisi di cronaca sulle piattaforme che usi; tasso Guber corretto'],
  ['3.4','Notifiche sul telefono, anche ad app chiusa: spese, stipendio e offerte sopra i tuoi tassi. Il catalogo si aggiorna da solo due volte al giorno dalle fonti ufficiali'],
  ['3.3','Catalogo: aggiunti i buoni fruttiferi postali (6 mesi, 4 anni, cedola, ordinario, 3x4, Rinnova) e orizzonti fino a 20 anni; le offerte scadute non compaiono pi\u00f9'],
  ['3.2','Nuovo look: vetro scuro semi-trasparente con sfumature, pulsanti glass e angoli pi\u00f9 morbidi, pensato per One UI'],
@@ -458,12 +459,12 @@ function consigli(){
 
 function offAlerts(){
   var A=[];if(!OFF||!OFF.offerte)return A;var lp=liquidPos().map(function(p){return {p:p,n:posNet(p)}}).sort(function(a,b){return b.n-a.n});
-  lp.forEach(function(x){var cap=num(x.p.cap),bo=null;OFF.offerte.forEach(function(o){if(o.rischio>2||o.mesi>12||cap<(o.min||0))return;if(o.promoFine&&monthsTo(o.promoFine)<=0)return;var c=offCalc(o,cap,12);var up=c.port*(c.nr-x.n)/100;if(up>=20&&(!bo||up>bo.up))bo={o:o,up:up,port:c.port}});
+  lp.forEach(function(x){var cap=num(x.p.cap),bo=null;OFF.offerte.forEach(function(o){if(o.non_per_me||o.rischio>2||o.mesi>12||cap<(o.min||0))return;if(o.promoFine&&monthsTo(o.promoFine)<=0)return;var c=offCalc(o,cap,12);var up=c.port*(c.nr-x.n)/100;if(up>=20&&(!bo||up>bo.up))bo={o:o,up:up,port:c.port}});
     if(bo)A.push({t:'Offerta migliore per '+x.p.nome,x:bo.o.nome+' ('+bo.o.emittente+') rende circa '+eur(bo.up)+' netti all\u2019anno in pi\u00f9 su '+eur(bo.port)+(bo.o.mesi?', con vincolo di '+bo.o.mesi+' mesi':', senza vincolo')+(bo.o.promoFine?'. Promo fino al '+new Date(bo.o.promoFine+'T12:00:00').toLocaleDateString('it-IT'):'')+(bo.o.ok?'':' (dato da verificare)')+'.',up:bo.up})});
   A.sort(function(a,b){return b.up-a.up});return A.slice(0,3)}
 function vCons(){
   var dmc='<div class="card"><h2>Dove li metto?</h2><div class="mu">Hai ricevuto dei soldi o vuoi spostarli? Scegli importo, durata e rischio: ti mostro le offerte che rendono di pi\u00f9 al netto di tasse e bollo, anche di altre banche.</div><p><button class="pri" onclick="openDM()">Apri</button></p></div>';
-  var h=dmc+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
+  var h=avvisiCard()+dmc+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
   if(!S.pos.length)return dmc+ctlCard()+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
@@ -487,7 +488,7 @@ function pc2(n){return Number(n).toFixed(2).replace('.',',')+'%'}
 function offVerifica(o){return o.verificato?'controllata sulla fonte ufficiale il '+gg(o.verificato):(OFF&&OFF.controllo?'non controllata in automatico: verifica sul sito':'')}
 function offSopra(){
   if(!OFF||!OFF.offerte)return [];var sg=OFF.soglie||{stato:3,altri:2.5};
-  return OFF.offerte.filter(function(o){return o.tasso>(o.cat==='stato'?sg.stato:sg.altri)&&!(o.promoFine&&o.promoFine<today())}).sort(function(a,b){return b.tasso-a.tasso});
+  return OFF.offerte.filter(function(o){return !o.non_per_me&&o.tasso>(o.cat==='stato'?sg.stato:sg.altri)&&!(o.promoFine&&o.promoFine<today())}).sort(function(a,b){return b.tasso-a.tasso});
 }
 function offScheda(o){
   var v=offVerifica(o);
@@ -503,6 +504,11 @@ function fOfferta(id){
   var o=OFF&&OFF.offerte?OFF.offerte.filter(function(x){return x.id===id})[0]:null;
   sheetOpen('Offerta',(o?offScheda(o):'<div class="mu">Questa offerta non è più nel catalogo (scaduta o ritirata).</div>')+'<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="fSopra()">Tutte quelle sopra i miei tassi</button><button class="sec" onclick="closeForm()">Chiudi</button></p>');
 }
+function avvisiCard(){
+  if(!OFF||!OFF.avvisi)return '';var h='';
+  OFF.avvisi.forEach(function(a){if(!S.pos.some(function(p){return String(p.piatt).toLowerCase().indexOf(String(a.piatt).toLowerCase())>=0}))return;
+    h+='<div class="card alert"><b>'+esc(a.titolo)+'</b>'+esc(a.testo)+'<div class="mu" style="margin-top:6px">'+esc(a.data)+(/^https?:/.test(a.url)?' \u00b7 <a href="'+esc(a.url)+'" target="_blank" rel="noopener" style="color:var(--ac)">Fonte</a>':'')+'</div></div>'});
+  return h}
 function ctlCard(){
   if(!OFF||!OFF.offerte)return '';
   var c=OFF.controllo,q=c?new Date(c.quando):null,sg=OFF.soglie||{stato:3,altri:2.5};
@@ -589,7 +595,7 @@ function dmList(amt,hor){
   if(!OFF)return {ok:[],esc:0};
   var ok=[],esc=0;
   OFF.offerte.forEach(function(o){
-    if(o.rischio>DM.risk||(o.promoFine&&monthsTo(o.promoFine)<=0)){esc++;return}
+    if(o.non_per_me||o.rischio>DM.risk||(o.promoFine&&monthsTo(o.promoFine)<=0)){esc++;return}
     if(DM.liq&&o.mesi>0){esc++;return}
     if(amt<(o.min||0)){esc++;return}
     var c=offCalc(o,amt,hor);

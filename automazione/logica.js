@@ -47,7 +47,7 @@ function applica(catalogo, regole, letture, oggi, controlli) {
 }
 
 function daNotificare(catalogo, notificate, oggi) {
-  return catalogo.offerte.filter(o => !scaduta(o, oggi) && o.tasso > soglia(o) && (notificate[o.id] === undefined || o.tasso > notificate[o.id]));
+  return catalogo.offerte.filter(o => !o.non_per_me && !scaduta(o, oggi) && o.tasso > soglia(o) && (notificate[o.id] === undefined || o.tasso > notificate[o.id]));
 }
 
 function messaggio(o, prima) {
