@@ -1,0 +1,48 @@
+name: Controllo offerte
+on:
+  schedule:
+    - cron: '43 9,18 * * *'
+      timezone: 'Europe/Rome'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['automazione/*.js', '.github/workflows/offerte.yml']
+permissions:
+  contents: write
+concurrency:
+  group: offerte
+  cancel-in-progress: false
+jobs:
+  controlla:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Test
+        run: node automazione/test.js
+      - name: Installa gli strumenti
+        run: |
+          mkdir -p "$RUNNER_TEMP/dip" && cd "$RUNNER_TEMP/dip"
+          npm init -y >/dev/null
+          npm i playwright@1.56.1 web-push@3.6.7 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Controlla le offerte e avvisa
+        env:
+          NODE_PATH: ${{ runner.temp }}/dip/node_modules
+          PUSH_CONFIG: ${{ secrets.PUSH_CONFIG }}
+        run: node automazione/controlla.js
+      - name: Salva catalogo e stato
+        if: ${{ !cancelled() }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add offerte.json automazione/stato.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Aggiorna offerte ($(TZ=Europe/Rome date '+%d/%m %H:%M'))"
+          for i in 1 2 3; do git push && exit 0; git pull --rebase -X theirs; done
+          exit 1

@@ -1,0 +1,38 @@
+name: Promemoria
+on:
+  schedule:
+    - cron: '17 21 * * *'
+      timezone: 'Europe/Rome'
+    - cron: '41 9 10 * *'
+      timezone: 'Europe/Rome'
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: Quale notifica inviare
+        type: choice
+        options: [prova, spese, stipendio]
+        default: prova
+  push:
+    branches: [main]
+    paths: ['automazione/prova.txt']
+permissions:
+  contents: read
+jobs:
+  avvisa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Installa web-push
+        run: |
+          mkdir -p "$RUNNER_TEMP/dip" && cd "$RUNNER_TEMP/dip"
+          npm init -y >/dev/null && npm i web-push@3.6.7 >/dev/null
+      - name: Invia
+        env:
+          NODE_PATH: ${{ runner.temp }}/dip/node_modules
+          PUSH_CONFIG: ${{ secrets.PUSH_CONFIG }}
+          TIPO: ${{ github.event_name == 'schedule' && (github.event.schedule == '41 9 10 * *' && 'stipendio' || 'spese') || inputs.tipo || 'prova' }}
+        run: node automazione/promemoria.js "$TIPO"

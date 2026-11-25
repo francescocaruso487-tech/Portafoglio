@@ -1,0 +1,30 @@
+{
+ "nota": "Offerte già notificate: id -> tasso lordo più alto avvisato. Base: catalogo del 25/11/2026.",
+ "notificate": {
+  "aidexa-cedola": 4.2,
+  "aidexa-pronto": 4.1,
+  "ifis-rendimax": 4,
+  "progetto-key": 4,
+  "ing-arancio": 4,
+  "illimity-premium": 4,
+  "guber-102": 4,
+  "klarna-24": 3.15,
+  "ca-auto-promo": 3.75,
+  "bot-12m": 3.21,
+  "bfp-rinnova": 3.69,
+  "bfp-premium4": 4,
+  "bfp-minori": 5,
+  "tr-nuovi4": 4,
+  "bbva-4": 4,
+  "ca-auto-12": 3.6,
+  "klarna-18": 3.7,
+  "sistema-12": 4,
+  "solution-yes12": 3.75,
+  "tyche-12": 3.5,
+  "bunq-nuova": 3.11,
+  "btp-st-ott28": 3.45
+ },
+ "visti": {},
+ "annunci": {},
+ "controlli": []
+}

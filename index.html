@@ -131,8 +131,9 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.3',APP_DATE='24 nov 2026';
+var APP_VERSION='3.4',APP_DATE='25 nov 2026';
 var CHANGELOG=[
+ ['3.4','Notifiche sul telefono, anche ad app chiusa: spese, stipendio e offerte sopra i tuoi tassi. Il catalogo si aggiorna da solo due volte al giorno dalle fonti ufficiali'],
  ['3.3','Catalogo: aggiunti i buoni fruttiferi postali (6 mesi, 4 anni, cedola, ordinario, 3x4, Rinnova) e orizzonti fino a 20 anni; le offerte scadute non compaiono pi\u00f9'],
  ['3.2','Nuovo look: vetro scuro semi-trasparente con sfumature, pulsanti glass e angoli pi\u00f9 morbidi, pensato per One UI'],
  ['3.1','Carburante: segna l\u2019autonomia prima e dopo il pieno, l\u2019app stima i km fatti tra un pieno e l\u2019altro. Consigli: avviso automatico se c\u2019\u00e8 un\u2019offerta che rende pi\u00f9 di una tua posizione'],
@@ -462,8 +463,8 @@ function offAlerts(){
   A.sort(function(a,b){return b.up-a.up});return A.slice(0,3)}
 function vCons(){
   var dmc='<div class="card"><h2>Dove li metto?</h2><div class="mu">Hai ricevuto dei soldi o vuoi spostarli? Scegli importo, durata e rischio: ti mostro le offerte che rendono di pi\u00f9 al netto di tasse e bollo, anche di altre banche.</div><p><button class="pri" onclick="openDM()">Apri</button></p></div>';
-  var h=dmc+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
-  if(!S.pos.length)return dmc+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
+  var h=dmc+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
+  if(!S.pos.length)return dmc+ctlCard()+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
 }
@@ -471,10 +472,107 @@ function vCons(){
 /* ===== Dove li metto? ===== */
 var OFF=null,DM={amt:1000,hor:12,risk:2,liq:false},BASE_NET=1.28;
 var RISCHIO=['','Molto basso','Basso','Medio','Alto','Molto alto'];
+var OFF_URL='https://raw.githubusercontent.com/francescocaruso487-tech/Portafoglio/main/offerte.json';
+function offStamp(j){return j?String((j.controllo&&j.controllo.quando)||j.aggiornato||''):''}
 function loadOff(cb){
+  var fine=function(){if(cb)cb()};
   try{var c=localStorage.getItem('portafoglio_off');if(c)OFF=JSON.parse(c)}catch(e){}
-  try{fetch('offerte.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.offerte){OFF=j;try{localStorage.setItem('portafoglio_off',JSON.stringify(j))}catch(e){}}if(cb)cb()}).catch(function(){if(cb)cb()})}catch(e){if(cb)cb()}
+  var leggi=function(u){return fetch(u,{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(j){if(!j||!j.offerte)throw 0;return j})};
+  try{leggi(OFF_URL+'?t='+Date.now()).catch(function(){return leggi('offerte.json')}).then(function(j){if(offStamp(j)>=offStamp(OFF)){OFF=j;try{localStorage.setItem('portafoglio_off',JSON.stringify(j))}catch(e){}}}).then(fine,fine)}catch(e){fine()}
 }
+
+/* ===== controllo automatico delle offerte ===== */
+function gg(d){return new Date(d+'T12:00:00').toLocaleDateString('it-IT')}
+function pc2(n){return Number(n).toFixed(2).replace('.',',')+'%'}
+function offVerifica(o){return o.verificato?'controllata sulla fonte ufficiale il '+gg(o.verificato):(OFF&&OFF.controllo?'non controllata in automatico: verifica sul sito':'')}
+function offSopra(){
+  if(!OFF||!OFF.offerte)return [];var sg=OFF.soglie||{stato:3,altri:2.5};
+  return OFF.offerte.filter(function(o){return o.tasso>(o.cat==='stato'?sg.stato:sg.altri)&&!(o.promoFine&&o.promoFine<today())}).sort(function(a,b){return b.tasso-a.tasso});
+}
+function offScheda(o){
+  var v=offVerifica(o);
+  return '<div class="card" style="margin:8px 0;padding:12px"><div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(o.nome)+'</b><span style="white-space:nowrap"><b>'+pc2(o.tasso)+'</b></span></div>'+
+   '<div class="mu">'+esc(o.emittente)+' · '+(o.mesi?'durata '+o.mesi+' mesi':'senza vincolo')+' · netto '+pc2(o.tasso*(1-o.tassa/100)-(o.bollo?0.2:0))+(o.prima?' · prima '+pc2(o.prima)+' lordo':'')+'</div>'+
+   (o.promoFine?'<div style="margin-top:6px;color:var(--wa,#e0b04a)">Data limite: '+gg(o.promoFine)+'</div>':'')+
+   '<div class="mu" style="margin-top:6px">'+esc(o.garanzia||'')+(o.req?' · '+esc(o.req):'')+'</div>'+
+   (v?'<div class="mu" style="margin-top:4px">'+esc(v.charAt(0).toUpperCase()+v.slice(1))+'</div>':'')+
+   (/^https?:/.test(o.fonte)?'<div style="margin-top:6px"><a href="'+esc(o.fonte)+'" target="_blank" rel="noopener" style="color:var(--ac)">Fonte e dettagli</a></div>':'')+'</div>';
+}
+function fSopra(){var L=offSopra();sheetOpen('Sopra i miei tassi',(L.length?L.map(offScheda).join(''):'<div class="mu">Nessuna offerta in questo momento.</div>')+'<p><button class="pri" onclick="closeForm()">Chiudi</button></p>')}
+function fOfferta(id){
+  var o=OFF&&OFF.offerte?OFF.offerte.filter(function(x){return x.id===id})[0]:null;
+  sheetOpen('Offerta',(o?offScheda(o):'<div class="mu">Questa offerta non è più nel catalogo (scaduta o ritirata).</div>')+'<p style="display:flex;gap:8px;flex-wrap:wrap"><button class="pri" onclick="fSopra()">Tutte quelle sopra i miei tassi</button><button class="sec" onclick="closeForm()">Chiudi</button></p>');
+}
+function ctlCard(){
+  if(!OFF||!OFF.offerte)return '';
+  var c=OFF.controllo,q=c?new Date(c.quando):null,sg=OFF.soglie||{stato:3,altri:2.5};
+  var h='<div class="card"><h2>Controllo offerte</h2><div class="mu">'+(q?'Ultimo controllo: '+q.toLocaleString('it-IT',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' · lette '+c.lette+' fonti su '+c.totali+'.':'Il primo controllo automatico non è ancora arrivato.')+' Ti avviso per tassi lordi sopra '+pc(sg.altri)+' (buoni e titoli di Stato: sopra '+pc(sg.stato)+').</div>';
+  if(q&&Date.now()-q>36*36e5)h+='<div style="margin-top:6px;color:var(--wa,#e0b04a)">Il controllo è fermo da più di un giorno.</div>';
+  h+='<p><button class="pri" onclick="fSopra()">Offerte sopra i miei tassi ('+offSopra().length+')</button></p>';
+  if(OFF.daControllare&&OFF.daControllare.length)h+='<div class="mu"><b>Da controllare a mano</b></div>'+OFF.daControllare.slice(0,5).map(function(x){return '<div class="logr"><a href="'+esc(/^https?:/.test(x.url)?x.url:'#')+'" target="_blank" rel="noopener" style="color:var(--ac)">'+esc(x.titolo)+'</a><span class="mu">'+esc(gg(x.data))+'</span></div>'}).join('');
+  return h+'<div class="mu" style="font-size:12px;margin-top:8px">Revolut, BBVA e il tasso Trade Republic per chi è già cliente non si leggono in automatico: controllali nelle loro app.</div></div>';
+}
+
+/* ===== notifiche ===== */
+var PKEY='portafoglio_push',PUSH_KO=false,REPO='https://github.com/francescocaruso487-tech/portafoglio';
+function pushInfo(){try{return JSON.parse(localStorage.getItem(PKEY))}catch(e){return null}}
+function pushOk(){return 'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&window.crypto&&crypto.subtle}
+function b64u(buf){var a=new Uint8Array(buf),t='';for(var i=0;i<a.length;i++)t+=String.fromCharCode(a[i]);return btoa(t).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function unb64u(x){var t=x.replace(/-/g,'+').replace(/_/g,'/');while(t.length%4)t+='=';t=atob(t);var a=new Uint8Array(t.length);for(var i=0;i<t.length;i++)a[i]=t.charCodeAt(i);return a}
+function nuoveChiavi(){
+  return crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']).then(function(k){
+    return Promise.all([crypto.subtle.exportKey('raw',k.publicKey),crypto.subtle.exportKey('jwk',k.privateKey)]).then(function(x){return {pub:b64u(x[0]),priv:x[1].d}})});
+}
+function pushAttiva(){
+  var msg=function(t){var m=document.getElementById('pushMsg');if(m)m.textContent=t};
+  msg('Attivo…');
+  Notification.requestPermission().then(function(perm){
+    if(perm!=='granted'){msg('Permesso negato: abilita le notifiche per questa app nelle impostazioni del telefono, poi riprova.');return}
+    var old=pushInfo();
+    return Promise.all([navigator.serviceWorker.ready,old&&old.pub&&old.priv?old:nuoveChiavi()]).then(function(x){
+      var reg=x[0],k=x[1];
+      return reg.pushManager.getSubscription().then(function(sub){
+        if(sub&&sub.options&&sub.options.applicationServerKey&&b64u(sub.options.applicationServerKey)!==k.pub)return sub.unsubscribe().then(function(){return null});
+        return sub;
+      }).then(function(sub){return sub||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64u(k.pub)})}).then(function(sub){
+        var cambiato=!!(old&&old.endpoint&&old.endpoint!==sub.endpoint);
+        var info={pub:k.pub,priv:k.priv,endpoint:sub.endpoint,code:JSON.stringify({v:1,sub:sub.toJSON(),pub:k.pub,priv:k.priv})};
+        localStorage.setItem(PKEY,JSON.stringify(info));PUSH_KO=false;render();
+        msg(cambiato?'Il codice è cambiato: aggiorna il secret PUSH_CONFIG su GitHub.':'Fatto. Ora segui i passaggi qui sopra.');
+      });
+    });
+  }).catch(function(){msg('Attivazione non riuscita. Apri l\'app installata, con la connessione attiva, e riprova.')});
+}
+function pushCopia(){
+  var i=pushInfo(),m=document.getElementById('pushMsg');if(!i)return;
+  var ko=function(){var t=document.getElementById('pushTxt');t.hidden=false;t.value=i.code;t.focus();t.select();m.textContent='Copia a mano il testo selezionato.'};
+  try{navigator.clipboard.writeText(i.code).then(function(){m.textContent='Codice copiato.'},ko)}catch(e){ko()}
+}
+function pushControlla(){
+  var i=pushInfo();if(!i||!pushOk())return;
+  navigator.serviceWorker.ready.then(function(r){return r.pushManager.getSubscription()}).then(function(s){
+    var ko=!s||s.endpoint!==i.endpoint||Notification.permission!=='granted';
+    if(ko!==PUSH_KO){PUSH_KO=ko;if(ko)toast('Le notifiche vanno riattivate: apri Dati.');if(tab==='dati')render()}
+  }).catch(function(){});
+}
+function vNotif(){
+  var h='<div class="card"><h2>Notifiche</h2><div class="mu">Arrivano anche ad app chiusa: spese ogni sera verso le 21:17, stipendio il 10 del mese verso le 9:41, offerte sopra i tuoi tassi dopo i controlli delle 9:43 e 18:43. Gli orari possono slittare un po\'.</div>';
+  if(!pushOk())return h+'<div class="mu" style="margin-top:8px">Questo browser non supporta le notifiche: apri l\'app installata da Chrome.</div></div>';
+  var i=pushInfo();
+  if(PUSH_KO)h+='<div style="margin-top:8px;color:var(--wa,#e0b04a)"><b>Da riattivare:</b> tocca "Riattiva", poi aggiorna il secret su GitHub.</div>';
+  h+='<p><button class="pri" onclick="pushAttiva()">'+(i?'Riattiva':'Attiva notifiche')+'</button>'+(i?' <button class="sec" onclick="pushCopia()">Copia codice</button>':'')+'</p>';
+  if(i)h+='<div class="mu">Da fare una volta sola:<br>1. Tocca "Copia codice".<br>2. <a href="'+REPO+'/settings/secrets/actions/new" target="_blank" rel="noopener" style="color:var(--ac)">Crea il secret su GitHub</a>: nome <b>PUSH_CONFIG</b>, incolla il codice, "Add secret". Se esiste già, <a href="'+REPO+'/settings/secrets/actions" target="_blank" rel="noopener" style="color:var(--ac)">modificalo</a>.<br>3. <a href="'+REPO+'/actions/workflows/promemoria.yml" target="_blank" rel="noopener" style="color:var(--ac)">Invia la prova</a>: "Run workflow" con "prova".<br>Il codice è privato: incollalo solo lì.</div><textarea id="pushTxt" rows="3" hidden readonly></textarea>';
+  return h+'<div class="note" id="pushMsg"></div></div>';
+}
+function apriHash(hs){
+  var m=/^#(spese|stipendio|offerte|offerta=([A-Za-z0-9_\-]+))$/.exec(hs||'');if(!m)return;
+  var md=document.getElementById('modal');if(md&&!md.hidden){md.hidden=true;md.innerHTML=''}
+  try{history.replaceState({tab:tab},'',location.pathname+location.search)}catch(e){}
+  if(m[1]==='spese')go('spese');
+  else if(m[1]==='stipendio'){go('spese');if(!stipMese())fStip()}
+  else{go('cons');loadOff(function(){if(tab!=='cons')return;render();if(m[2])fOfferta(m[2]);else fSopra()})}
+}
+
 function monthsTo(d){var a=new Date(d+'T12:00:00'),n=new Date();return Math.max(0,(a-n)/2629800000)}
 function offCalc(o,amt,hor){
   var port=(o.max>0&&amt>o.max)?o.max:amt;
@@ -528,6 +626,7 @@ function dmRun(){
      cf+'<div class="mu" style="margin-top:6px">'+esc(o.garanzia)+(o.req?' · '+esc(o.req):'')+'</div>'+
      (w.length?'<div class="mu" style="margin-top:4px;color:var(--wa,#e0b04a)">'+esc(w.join(' · '))+'</div>':'')+
      '<div class="mu" style="margin-top:4px">'+esc(sc)+'</div>'+
+     (offVerifica(o)?'<div class="mu" style="margin-top:4px;font-size:12px">'+esc(offVerifica(o))+'</div>':'')+
      (/^https?:/.test(o.fonte)?'<div style="margin-top:6px"><a href="'+esc(o.fonte)+'" target="_blank" rel="noopener" style="color:var(--ac)">Fonte e dettagli</a></div>':'')+'</div>'
   });
   if(L.esc)h+='<div class="mu">'+L.esc+' offerte escluse da rischio, liquidità, importo minimo o vincolo più lungo dell\'orizzonte.</div>';
@@ -563,6 +662,7 @@ function vDati(){
    '<div class="two"><div><label>Soglia max per piattaforma (%)</label><input inputmode="decimal" id="sPi" value="'+esc(S.set.maxPiatt)+'"></div><div><label>Soglia max cripto (%)</label><input inputmode="decimal" id="sCr" value="'+esc(S.set.maxCripto)+'"></div></div>'+
    '<label>Segnala soldi fermi solo sopra (€)</label><input inputmode="decimal" id="sId" value="'+esc(S.set.minIdle)+'">'+'<label>Cashback sulla carta Trade Republic (%)</label><input inputmode="decimal" id="sCb" value="'+esc(S.set.cashback)+'">'+
    '<p><button class="sec" onclick="saveSet()">Salva obiettivi e soglie</button></p></div>'+
+   vNotif()+
    '<div class="card"><h2>Backup</h2><div class="mu">Ogni modifica si salva da sola su questo dispositivo, senza account e senza internet. Se cancelli i dati del browser o disinstalli l\'app i dati si perdono: scarica ogni tanto il file di backup.</div>'+
    '<p><button class="pri" onclick="doDownload()">Scarica file di backup</button> <button class="sec" onclick="doCopy()">Copia testo</button></p><label>Ripristina da file</label><input type="file" accept=".json,application/json" onchange="doFile(this)"><label>Incolla qui un backup per ripristinarlo</label><textarea id="imp" rows="4"></textarea>'+
    '<p><button class="sec" onclick="doImport()">Ripristina da backup</button> <button class="dan" onclick="doReset()">Cancella tutto</button></p><div id="bkMsg" class="note"></div></div>'+
@@ -649,7 +749,7 @@ function updateApp(){
   var m=document.getElementById('upMsg');if(m)m.textContent='Aggiorno…';
   var go2=function(){location.reload()};
   var regs=(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations)?navigator.serviceWorker.getRegistrations():Promise.resolve([]);
-  regs.then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))})
+  regs.then(function(rs){return Promise.all(rs.map(function(r){return r.update().catch(function(){})}))})
    .then(function(){return window.caches?caches.keys().then(function(k){return Promise.all(k.map(function(x){return caches.delete(x)}))}):0})
    .then(go2,go2);
 }
@@ -1042,10 +1142,12 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runInt();runFisse();runPac();render();refreshPrezzi();loadOff(function(){if(tab==='cons')render()});try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();
-document.addEventListener('visibilitychange',function(){if(!document.hidden){runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
+load();runInt();runFisse();runPac();render();refreshPrezzi();loadOff(function(){if(tab==='cons')render()});try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();apriHash(location.hash);
+window.addEventListener('hashchange',function(){apriHash(location.hash)});
+document.addEventListener('visibilitychange',function(){if(!document.hidden){loadOff(function(){var md=document.getElementById('modal');if(tab==='cons'&&md.hidden)render()});pushControlla();runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(pushControlla).catch(function(){})});
+  navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.apri)apriHash(e.data.apri)})}
 </script>
 </body>
 </html>
