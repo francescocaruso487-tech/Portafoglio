@@ -29,5 +29,14 @@
  "visti": {},
  "annunci": {},
  "controlli": [],
- "sentinelle": {}
+ "sentinelle": {
+  "guber-social": {
+   "firma": "0,20% 0,40%",
+   "data": "2026-11-25"
+  },
+  "confronto-finanzadigitale": {
+   "firma": "4",
+   "data": "2026-11-25"
+  }
+ }
 }
