@@ -117,13 +117,14 @@ async function sentinelle(leggi, stato, oggi) {
     if (!pg) { console.log(`sentinella ${s.id}: PAGINA NON LETTA`); continue; }
     const set = [...new Set([...pg.testo.matchAll(/\d{1,2},\d{1,2} ?%/g)].map(m => m[0].replace(' ', '')))].sort();
     if (!set.length) { console.log(`sentinella ${s.id}: nessun tasso in pagina`); continue; }
-    const firma = set.join(' ');
+    const val = set.map(x => parseFloat(x.replace(',', '.'))).filter(x => x <= 8);
+    const firma = s.soloMax ? String(Math.max(...val, 0)) : set.join(' ');
     const prima = stato.sentinelle[s.id];
     console.log(`sentinella ${s.id}: ${firma}`);
     if (!prima) { stato.sentinelle[s.id] = { firma, data: oggi }; continue; }
-    if (prima.firma === firma) continue;
-    L.aggiungiControllo(stato.controlli, { chiave: 'sent:' + s.id + ':' + firma, titolo: s.nome + ': i tassi in pagina sono cambiati (' + set.slice(0, 6).join(', ') + ')', url: s.url }, oggi);
-    avvisi.push({ id: s.id, firma, msg: { title: s.nome + ': tassi cambiati in pagina', body: 'Ora: ' + set.slice(0, 6).join(', ') + ' · verifica sul sito', tag: 'sent-' + s.id, url: './#offerte' } });
+    if (s.soloMax ? !(+firma > +prima.firma) : prima.firma === firma) continue;
+    L.aggiungiControllo(stato.controlli, { chiave: 'sent:' + s.id + ':' + firma, titolo: s.nome + (s.soloMax ? ': compare un tasso piu\' alto (' + firma.replace('.', ',') + '%)' : ': i tassi in pagina sono cambiati (' + set.slice(0, 6).join(', ') + ')'), url: s.url }, oggi);
+    avvisi.push({ id: s.id, firma, msg: { title: s.nome + (s.soloMax ? ': tasso piu\' alto in pagina' : ': tassi cambiati in pagina'), body: 'Ora: ' + (s.soloMax ? firma.replace('.', ',') + '%' : set.slice(0, 6).join(', ')) + ' · verifica sul sito', tag: 'sent-' + s.id, url: './#offerte' } });
   }
   return avvisi;
 }

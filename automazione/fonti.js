@@ -112,11 +112,13 @@ const SCOPERTA = {
   tesoro: DT,
   // pagine senza regola precisa: si guardano i tassi (%) scritti in pagina e si avvisa quando l'insieme cambia
   sentinelle: [
-    { id: 'bbva', nome: 'BBVA', url: 'https://www.bbva.it/' },
-    { id: 'guber', nome: 'Banca Guber', url: 'https://www.bancaguber.it/' },
-    { id: 'revolut', nome: 'Revolut', url: 'https://www.revolut.com/it-IT/savings/' },
-    { id: 'trade-republic', nome: 'Trade Republic', url: 'https://traderepublic.com/it-it/interessi' },
-    { id: 'confronto-depositi', nome: 'Confronto conti deposito (Facile.it)', url: 'https://www.facile.it/conti-deposito.html' }
+    { id: 'bbva-deposito', nome: 'BBVA Deposito Flessibile', url: 'https://www.bbva.it/persone/prodotti/deposito-flessibile.html' },
+    { id: 'bbva-conto', nome: 'BBVA Conto', url: 'https://www.bbva.it/persone/prodotti/conto-e-carta.html' },
+    { id: 'guber-102', nome: 'Guber Deposito 102', url: 'https://guber.it/deposito-102/' },
+    { id: 'guber-social', nome: 'Guber Deposito 102 Social', url: 'https://guber.it/deposito-102-social/' },
+    { id: 'revolut', nome: 'Revolut Deposito senza vincoli', url: 'https://www.revolut.com/it-IT/instant-access-savings' },
+    // pagine di confronto: si avvisa solo se compare un tasso piu' alto del massimo gia' visto
+    { id: 'confronto-finanzadigitale', nome: 'Confronto conti deposito (Finanza Digitale)', url: 'https://www.finanzadigitale.com/conti/conto-deposito/', soloMax: true }
   ]
 };
 module.exports = { REGOLE, SCOPERTA, LORDO, PREMIO, iso, n };
