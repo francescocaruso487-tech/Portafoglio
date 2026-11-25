@@ -17,6 +17,7 @@ on:
     paths: ['automazione/prova.txt']
 permissions:
   contents: read
+  issues: read
 jobs:
   avvisa:
     runs-on: ubuntu-24.04
@@ -34,5 +35,6 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/dip/node_modules
           PUSH_CONFIG: ${{ secrets.PUSH_CONFIG }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TIPO: ${{ github.event_name == 'schedule' && (github.event.schedule == '41 9 10 * *' && 'stipendio' || 'spese') || inputs.tipo || 'prova' }}
         run: node automazione/promemoria.js "$TIPO"

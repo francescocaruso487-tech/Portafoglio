@@ -131,8 +131,9 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.5',APP_DATE='25 nov 2026';
+var APP_VERSION='3.6',APP_DATE='25 nov 2026';
 var CHANGELOG=[
+ ['3.6','Notifiche: se il telefono cambia iscrizione l\u2019app la riattiva da sola e la comunica a GitHub (con un permesso limitato), senza ricopiare il codice'],
  ['3.5','Le offerte riservate ad altri (minori, eredi, nuovi clienti) non compaiono pi\u00f9 tra le tue; avvisi di cronaca sulle piattaforme che usi; tasso Guber corretto'],
  ['3.4','Notifiche sul telefono, anche ad app chiusa: spese, stipendio e offerte sopra i tuoi tassi. Il catalogo si aggiorna da solo due volte al giorno dalle fonti ufficiali'],
  ['3.3','Catalogo: aggiunti i buoni fruttiferi postali (6 mesi, 4 anni, cedola, ordinario, 3x4, Rinnova) e orizzonti fino a 20 anni; le offerte scadute non compaiono pi\u00f9'],
@@ -544,20 +545,42 @@ function pushAttiva(){
         var cambiato=!!(old&&old.endpoint&&old.endpoint!==sub.endpoint);
         var info={pub:k.pub,priv:k.priv,endpoint:sub.endpoint,code:JSON.stringify({v:1,sub:sub.toJSON(),pub:k.pub,priv:k.priv})};
         localStorage.setItem(PKEY,JSON.stringify(info));PUSH_KO=false;render();
+        if(ghTok()){pushPubblica(info,function(r){msg(r==='ok'?'Fatto: iscrizione inviata a GitHub in automatico.':'Iscrizione attiva, ma l\u2019invio a GitHub non \u00e8 riuscito: controlla il token.')});return}
         msg(cambiato?'Il codice è cambiato: aggiorna il secret PUSH_CONFIG su GitHub.':'Fatto. Ora segui i passaggi qui sopra.');
       });
     });
   }).catch(function(){msg('Attivazione non riuscita. Apri l\'app installata, con la connessione attiva, e riprova.')});
 }
+var GKEY='portafoglio_gh',GAPI='https://api.github.com/repos/francescocaruso487-tech/Portafoglio/issues';
+function ghTok(){try{return localStorage.getItem(GKEY)||''}catch(e){return ''}}
+function pushPubblica(info,done){
+  var t=ghTok();if(!t||!info){if(done)done('manca');return}
+  var sub;try{sub=JSON.parse(info.code).sub}catch(e){if(done)done('err');return}
+  fetch(GAPI,{method:'POST',headers:{Authorization:'Bearer '+t,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({title:'iscrizione',body:'Iscrizione notifiche creata dall\u2019app. Non modificare.\n\n```json\n'+JSON.stringify({endpoint:sub.endpoint,keys:sub.keys})+'\n```'})})
+  .then(function(r){if(!r.ok)throw new Error(r.status);info.pubblicato=info.endpoint;localStorage.setItem(PKEY,JSON.stringify(info));if(done)done('ok')}).catch(function(){if(done)done('err')});
+}
+function ghSalva(){
+  var el=document.getElementById('ghTok'),m=document.getElementById('pushMsg'),v=el?el.value.trim():'';
+  if(!/^(github_pat_|ghp_)[A-Za-z0-9_]+$/.test(v)){if(m)m.textContent='Il codice non sembra un token GitHub: deve iniziare con github_pat_.';return}
+  if(!pushInfo()){if(m)m.textContent='Prima tocca "Attiva notifiche".';return}
+  try{localStorage.setItem(GKEY,v)}catch(e){}
+  if(m)m.textContent='Invio…';
+  pushPubblica(pushInfo(),function(r){if(m)m.textContent=r==='ok'?'Fatto: GitHub ha ricevuto l\u2019iscrizione. Non devi pi\u00f9 copiare nulla.':'Invio non riuscito: controlla che il token abbia "Issues: Read and write" sul repository Portafoglio.';render()});
+}
 function pushCopia(){
   var i=pushInfo(),m=document.getElementById('pushMsg');if(!i)return;
   var ko=function(){var t=document.getElementById('pushTxt');t.hidden=false;t.value=i.code;t.focus();t.select();m.textContent='Copia a mano il testo selezionato.'};
+  i.copiato=i.endpoint;try{localStorage.setItem(PKEY,JSON.stringify(i))}catch(e){}
   try{navigator.clipboard.writeText(i.code).then(function(){m.textContent='Codice copiato.'},ko)}catch(e){ko()}
 }
 function pushControlla(){
   var i=pushInfo();if(!i||!pushOk())return;
-  navigator.serviceWorker.ready.then(function(r){return r.pushManager.getSubscription()}).then(function(s){
-    var ko=!s||s.endpoint!==i.endpoint||Notification.permission!=='granted';
+  navigator.serviceWorker.ready.then(function(r){return r.pushManager.getSubscription().then(function(sub){
+    if(!sub&&Notification.permission==='granted'&&i.pub)return r.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:unb64u(i.pub)}).catch(function(){return null});
+    return sub})}).then(function(sub){
+    if(sub&&sub.endpoint!==i.endpoint){i.endpoint=sub.endpoint;i.code=JSON.stringify({v:1,sub:sub.toJSON(),pub:i.pub,priv:i.priv});try{localStorage.setItem(PKEY,JSON.stringify(i))}catch(e){}}
+    if(sub&&ghTok()&&i.pubblicato!==sub.endpoint)pushPubblica(i);
+    var ko=!sub||Notification.permission!=='granted'||(!ghTok()&&i.copiato!==sub.endpoint);
     if(ko!==PUSH_KO){PUSH_KO=ko;if(ko)toast('Le notifiche vanno riattivate: apri Dati.');if(tab==='dati')render()}
   }).catch(function(){});
 }
@@ -568,6 +591,7 @@ function vNotif(){
   if(PUSH_KO)h+='<div style="margin-top:8px;color:var(--wa,#e0b04a)"><b>Da riattivare:</b> tocca "Riattiva", poi aggiorna il secret su GitHub.</div>';
   h+='<p><button class="pri" onclick="pushAttiva()">'+(i?'Riattiva':'Attiva notifiche')+'</button>'+(i?' <button class="sec" onclick="pushCopia()">Copia codice</button>':'')+'</p>';
   if(i)h+='<div class="mu">Da fare una volta sola:<br>1. Tocca "Copia codice".<br>2. <a href="'+REPO+'/settings/secrets/actions/new" target="_blank" rel="noopener" style="color:var(--ac)">Crea il secret su GitHub</a>: nome <b>PUSH_CONFIG</b>, incolla il codice, "Add secret". Se esiste già, <a href="'+REPO+'/settings/secrets/actions" target="_blank" rel="noopener" style="color:var(--ac)">modificalo</a>.<br>3. <a href="'+REPO+'/actions/workflows/promemoria.yml" target="_blank" rel="noopener" style="color:var(--ac)">Invia la prova</a>: "Run workflow" con "prova".<br>Il codice è privato: incollalo solo lì.</div><textarea id="pushTxt" rows="3" hidden readonly></textarea>';
+  h+='<div class="mu" style="margin-top:10px"><b>Collegamento automatico a GitHub'+(ghTok()?' (attivo)':'')+'</b><br>Così non devi più copiare il codice: se il telefono cambia iscrizione, l\'app la comunica da sola. Crea <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener" style="color:var(--ac)">un token</a> solo per il repository Portafoglio, con permesso "Issues: Read and write", e incollalo qui.</div><p><input id="ghTok" type="password" autocomplete="off" placeholder="github_pat_…" style="width:100%"><br><button class="sec" onclick="ghSalva()">Salva e invia</button></p>';
   return h+'<div class="note" id="pushMsg"></div></div>';
 }
 function apriHash(hs){

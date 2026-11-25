@@ -9,6 +9,7 @@ on:
     paths: ['automazione/*.js', '.github/workflows/offerte.yml']
 permissions:
   contents: write
+  issues: read
 concurrency:
   group: offerte
   cancel-in-progress: false
@@ -35,6 +36,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/dip/node_modules
           PUSH_CONFIG: ${{ secrets.PUSH_CONFIG }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node automazione/controlla.js
       - name: Salva catalogo e stato
         if: ${{ !cancelled() }}

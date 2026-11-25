@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { REGOLE, SCOPERTA, LORDO, PREMIO, iso, n } = require('./fonti');
 const L = require('./logica');
-const { leggiConfig, invia } = require('./push');
+const { leggiConfig, invia, configAggiornata } = require('./push');
 
 const F_CAT = path.join(__dirname, '..', 'offerte.json');
 const F_STATO = path.join(__dirname, 'stato.json');
@@ -162,7 +162,7 @@ async function sentinelle(leggi, stato, oggi) {
   // Notifiche: si segna come inviata solo quella partita davvero
   const nuove = L.daNotificare(catalogo, stato.notificate, oggi);
   let errore = null, config = null;
-  try { config = leggiConfig(process.env.PUSH_CONFIG); } catch (e) { errore = e.message; }
+  try { config = await configAggiornata(leggiConfig(process.env.PUSH_CONFIG)); } catch (e) { errore = e.message; }
   for (const o of nuove) console.log(`DA NOTIFICARE: ${o.id} ${o.tasso}`);
   for (const a of avvisi) console.log(`DA NOTIFICARE: ${a.msg.title}`);
   for (const a of sent) console.log(`DA NOTIFICARE: ${a.msg.title}`);
