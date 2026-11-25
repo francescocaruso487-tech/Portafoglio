@@ -11,11 +11,21 @@ const F_STATO = path.join(__dirname, 'stato.json');
 const UA = 'Mozilla/5.0 (Linux; Android 15; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36';
 const pulisci = s => s.replace(/[\s ​‍]+/g, ' ');
 
+const turni = new Map();
+function ritmo(host, extra) {
+  const prima = turni.get(host) || Promise.resolve();
+  const ora = prima.then(() => new Promise(ok => setTimeout(ok, extra + 4000)));
+  turni.set(host, ora);
+  return ora;
+}
+
 function lettore(browser) {
   const cache = new Map();
   return (url, grezza) => {
     if (!cache.has(url)) cache.set(url, (async () => {
-      for (let giro = 0; giro < 2; giro++) {
+      for (let giro = 0; giro < 3; giro++) {
+        // alcuni siti rifiutano richieste ravvicinate: si distanziano e si ritenta con calma
+        await ritmo(new URL(url).host, giro * 20000);
         try {
           if (grezza) {
             const r = await fetch(url, { signal: AbortSignal.timeout(30000) });
