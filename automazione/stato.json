@@ -37,6 +37,10 @@
   "confronto-finanzadigitale": {
    "firma": "4",
    "data": "2026-11-25"
+  },
+  "revolut": {
+   "firma": "2,5% 2,75% 3,5% 3,50%",
+   "data": "2026-11-26"
   }
  }
 }
