@@ -38,7 +38,7 @@
 {"id":"progetto-conto","tasso":4,"req":"3% fino al 30 novembre 2026, poi 4% fino al 30 giugno 2027. Banca uscita dall'amministrazione straordinaria ad aprile 2026 (Banca d'Italia)","nome":"Conto Progetto libero (3% poi 4%)","emittente":"Banca Progetto","cat":"libero","tassa":26,"mesi":0,"min":0,"max":0,"rischio":1,"garanzia":"FITD fino a 100.000 €","bollo":true,"promoFine":"2027-06-30","fonte":"https://www.bancaprogetto.it/it","ok":true,"verificato":"2026-11-26"}
  ],
  "controllo": {
-  "quando": "2026-11-26T16:37:59.846Z",
+  "quando": "2026-11-26T16:44:59.195Z",
   "lette": 30,
   "totali": 30,
   "nonLette": []
@@ -47,7 +47,20 @@
   "stato": 3,
   "altri": 2.5
  },
- "daControllare": [],
+ "daControllare": [
+  {
+   "data": "2026-11-26",
+   "chiave": "sent:confronto-pmi:4",
+   "titolo": "Classifiche PMI.it: compare un tasso piu' alto (4%)",
+   "url": "https://www.pmi.it/card/i-migliori-conti-deposito-del-2026-vincolati-liberi-e-senza-conto-corrente"
+  },
+  {
+   "data": "2026-11-26",
+   "chiave": "sent:confronto-finanza:4",
+   "titolo": "Confronto Finanza.com: compare un tasso piu' alto (4%)",
+   "url": "https://www.finanza.com/focus/conti/conto-deposito-migliore-confronto"
+  }
+ ],
  "avvisi": [
   {
    "id": "revolut-1116",
