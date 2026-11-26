@@ -112,13 +112,11 @@ const SCOPERTA = {
   tesoro: DT,
   // pagine senza regola precisa: si guardano i tassi (%) scritti in pagina e si avvisa quando l'insieme cambia
   sentinelle: [
-    { id: 'bbva-deposito', nome: 'BBVA Deposito Flessibile', url: 'https://www.bbva.it/persone/prodotti/deposito-flessibile.html' },
-    { id: 'bbva-conto', nome: 'BBVA Conto', url: 'https://www.bbva.it/persone/prodotti/conto-e-carta.html' },
-    { id: 'guber-102', nome: 'Guber Deposito 102', url: 'https://guber.it/deposito-102/' },
-    { id: 'guber-social', nome: 'Guber Deposito 102 Social', url: 'https://guber.it/deposito-102-social/' },
-    { id: 'revolut', nome: 'Revolut Deposito senza vincoli', url: 'https://www.revolut.com/it-IT/instant-access-savings' },
     // pagine di confronto: si avvisa solo se compare un tasso piu' alto del massimo gia' visto
-    { id: 'confronto-finanzadigitale', nome: 'Confronto conti deposito (Finanza Digitale)', url: 'https://www.finanzadigitale.com/conti/conto-deposito/', soloMax: true }
+    { id: 'confronto-finanzadigitale', nome: 'Confronto Finanza Digitale', url: 'https://www.finanzadigitale.com/conti/conto-deposito/', soloMax: true },
+    { id: 'confronto-finanza', nome: 'Confronto Finanza.com', url: 'https://www.finanza.com/focus/conti/conto-deposito-migliore-confronto', soloMax: true },
+    { id: 'confronto-facile', nome: 'Confronto Facile.it', url: 'https://facile.it/conti-deposito/risultati.html', soloMax: true },
+    { id: 'confronto-pmi', nome: 'Classifiche PMI.it', url: 'https://www.pmi.it/card/i-migliori-conti-deposito-del-2026-vincolati-liberi-e-senza-conto-corrente', soloMax: true }
   ]
 };
 module.exports = { REGOLE, SCOPERTA, LORDO, PREMIO, iso, n };

@@ -585,7 +585,7 @@ function pushControlla(){
   }).catch(function(){});
 }
 function vNotif(){
-  var h='<div class="card"><h2>Notifiche</h2><div class="mu">Arrivano anche ad app chiusa: spese ogni sera verso le 21:17, stipendio il 10 del mese verso le 9:41, offerte sopra i tuoi tassi dopo i controlli delle 9:43 e 18:43. Gli orari possono slittare un po\'.</div>';
+  var h='<div class="card"><h2>Notifiche</h2><div class="mu">Arrivano anche ad app chiusa: spese ogni sera verso le 21:17, stipendio il 10 del mese verso le 9:41, offerte sopra i tuoi tassi dopo i controlli, fatti ogni 3 ore circa. Gli orari possono slittare un po\'.</div>';
   if(!pushOk())return h+'<div class="mu" style="margin-top:8px">Questo browser non supporta le notifiche: apri l\'app installata da Chrome.</div></div>';
   var i=pushInfo();
   if(PUSH_KO)h+='<div style="margin-top:8px;color:var(--wa,#e0b04a)"><b>Da riattivare:</b> tocca "Riattiva", poi aggiorna il secret su GitHub.</div>';
