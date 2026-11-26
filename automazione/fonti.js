@@ -115,7 +115,6 @@ const SCOPERTA = {
     // pagine di confronto: si avvisa solo se compare un tasso piu' alto del massimo gia' visto
     { id: 'confronto-finanzadigitale', nome: 'Confronto Finanza Digitale', url: 'https://www.finanzadigitale.com/conti/conto-deposito/', soloMax: true },
     { id: 'confronto-finanza', nome: 'Confronto Finanza.com', url: 'https://www.finanza.com/focus/conti/conto-deposito-migliore-confronto', soloMax: true },
-    { id: 'confronto-facile', nome: 'Confronto Facile.it', url: 'https://facile.it/conti-deposito/risultati.html', soloMax: true },
     { id: 'confronto-pmi', nome: 'Classifiche PMI.it', url: 'https://www.pmi.it/card/i-migliori-conti-deposito-del-2026-vincolati-liberi-e-senza-conto-corrente', soloMax: true }
   ]
 };

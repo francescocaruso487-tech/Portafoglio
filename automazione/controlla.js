@@ -115,7 +115,7 @@ async function sentinelle(leggi, stato, oggi) {
   for (const s of SCOPERTA.sentinelle || []) {
     const pg = await leggi(s.url);
     if (!pg) { console.log(`sentinella ${s.id}: PAGINA NON LETTA`); continue; }
-    const set = [...new Set([...pg.testo.matchAll(/\d{1,2},\d{1,2} ?%/g)].map(m => m[0].replace(' ', '')))].sort();
+    const set = [...new Set([...pg.testo.matchAll(/\d{1,2}(?:,\d{1,2})? ?%/g)].map(m => m[0].replace(' ', '')))].sort();
     if (!set.length) { console.log(`sentinella ${s.id}: nessun tasso in pagina`); continue; }
     const val = set.map(x => parseFloat(x.replace(',', '.'))).filter(x => x <= 8);
     const firma = s.soloMax ? String(Math.max(...val, 0)) : set.join(' ');
