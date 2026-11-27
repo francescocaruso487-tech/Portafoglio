@@ -149,6 +149,7 @@ html.ios a{color:var(--ac)}
 html.ios .alert{border-left-width:.5px}
 html.ios .alert.in::before{background:var(--ac)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){html.ios .card,html.ios .pc,html.ios .hero,html.ios nav{background:var(--bg2)}}
+#main{overflow-wrap:anywhere}
 </style>
 <script>try{if(localStorage.getItem('portafoglio_tema')!=='oro')document.documentElement.classList.add('ios')}catch(e){document.documentElement.classList.add('ios')}</script>
 </head>
@@ -161,8 +162,9 @@ html.ios .alert.in::before{background:var(--ac)}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.7',APP_DATE='25 nov 2026';
+var APP_VERSION='3.7.1',APP_DATE='27 nov 2026';
 var CHANGELOG=[
+ ['3.7.1','Corretto: i nomi molto lunghi senza spazi non allargano pi\u00f9 la pagina in Scadenze e Dati'],
  ['3.7','Nuovo aspetto in stile iOS (Liquid Glass), chiaro o scuro come il telefono; in Dati si pu\u00f2 tornare al vetro scuro con l\u2019oro'],
  ['3.6','Notifiche: se il telefono cambia iscrizione l\u2019app la riattiva da sola e la comunica a GitHub (con un permesso limitato), senza ricopiare il codice'],
  ['3.5','Le offerte riservate ad altri (minori, eredi, nuovi clienti) non compaiono pi\u00f9 tra le tue; avvisi di cronaca sulle piattaforme che usi; tasso Guber corretto'],
