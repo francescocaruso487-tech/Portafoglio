@@ -163,8 +163,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.9',APP_DATE='27 nov 2026';
+var APP_VERSION='3.10',APP_DATE='27 nov 2026';
 var CHANGELOG=[
+ ['3.10','Nuovo: Andamento reale nel Quadro. L\u2019app registra il patrimonio ogni giorno e ne mostra il grafico (compare dal secondo giorno)'],
  ['3.9','Nuovo: "E se sposto dei soldi?" in Consigli. Simuli uno spostamento tra due posizioni e vedi interessi netti, ripartizione e peso delle piattaforme prima e dopo'],
  ['3.8.1','Le card su cui si tocca (avvisi, scadenze, riepiloghi) ora si usano anche con la tastiera e sono riconosciute dagli screen reader'],
  ['3.8','Nuovo: Stress test in Consigli. Scegli uno scenario (crisi azionaria, inverno cripto, tassi +2%, tempesta perfetta) o regola gli shock a mano e vedi quanto perde il patrimonio e dove'],
@@ -247,7 +248,7 @@ function normalize(){
   S.set=S.set||{};S.set.target=S.set.target||{};
   if(S.set.maxPiatt==null)S.set.maxPiatt=60;if(S.set.maxCripto==null)S.set.maxCripto=15;if(S.set.minIdle==null)S.set.minIdle=500;
   if(S.set.cashback==null)S.set.cashback=1;
-  if(!Array.isArray(S.log))S.log=[];if(!Array.isArray(S.mov))S.mov=[];if(!Array.isArray(S.fisse))S.fisse=[];if(!S.nos||typeof S.nos!=='object')S.nos={};if(!Array.isArray(S.ric))S.ric=[];
+  if(!Array.isArray(S.log))S.log=[];if(!Array.isArray(S.hist))S.hist=[];if(!Array.isArray(S.mov))S.mov=[];if(!Array.isArray(S.fisse))S.fisse=[];if(!S.nos||typeof S.nos!=='object')S.nos={};if(!Array.isArray(S.ric))S.ric=[];
 }
 function load(){
   try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);if(o&&Array.isArray(o.pos))S=o}}catch(e){}
@@ -259,10 +260,23 @@ function setSub(){
   var el=document.getElementById('sub');if(el)el.textContent='Dati inseriti da te \u00b7 '+m;
 }
 function save(){
+  try{histSnap()}catch(e){}
   S.ts=Date.now();
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
   setSub();
 }
+function histSnap(){var t=sum(S.pos,function(p){return num(p.cap)});if(!(t>0))return;if(!Array.isArray(S.hist))S.hist=[];var d=today(),l=S.hist[S.hist.length-1];t=Math.round(t*100)/100;if(l&&l.d===d)l.v=t;else S.hist.push({d:d,v:t});if(S.hist.length>1000)S.hist=S.hist.slice(-1000)}
+function histCard(){
+  var H=Array.isArray(S.hist)?S.hist:[];
+  if(H.length<2)return '<div class="note" style="margin:0 0 12px">Da oggi l’app registra il patrimonio ogni giorno: il grafico dell’andamento reale comparirà dal secondo giorno.</div>';
+  var W=320,Ht=110,pl=8,min=Infinity,max=-Infinity;H.forEach(function(x){if(x.v<min)min=x.v;if(x.v>max)max=x.v});if(max===min){max+=1;min-=1}
+  var t0=new Date(H[0].d).getTime(),t1=new Date(H[H.length-1].d).getTime()||t0+1,sp=Math.max(1,t1-t0);
+  var pts=H.map(function(x){return [pl+(new Date(x.d).getTime()-t0)/sp*(W-2*pl),Ht-pl-(x.v-min)/(max-min)*(Ht-2*pl)]});
+  var path='M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1)}).join(' L');
+  var d=H[H.length-1].v-H[0].v;
+  return '<div class="sechead"><h2>Andamento reale</h2></div><div class="card"><div class="'+(d<0?'neg':'posv')+'" style="font-weight:600">'+esc((d<0?'−':'+')+eur(Math.abs(d))+' dal '+dt(H[0].d))+'</div>'+
+   '<svg viewBox="0 0 '+W+' '+Ht+'" role="img" aria-label="Andamento del patrimonio registrato giorno per giorno, da '+esc(eur(H[0].v))+' a '+esc(eur(H[H.length-1].v))+'" style="width:100%;height:auto;display:block;margin-top:6px"><path d="'+path+'" fill="none" stroke="var(--ac)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>'+
+   '<div class="note" style="margin:6px 0 0">Valori registrati dall’app, uno al giorno. Includono versamenti, prelievi e interessi: non sono solo rendimento.</div></div>'}
 function uid(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
 /* ===== viste ===== */
@@ -321,6 +335,7 @@ function vQuadro0(){
   var h='<div class="hero"><div class="lab">Patrimonio censito</div><div class="tot" style="cursor:pointer" onclick="iTot()">'+esc(new Intl.NumberFormat('it-IT',{maximumFractionDigits:0}).format(Math.round(tot)))+'<small>\u20ac</small></div>'+
    '<div class="pills"><span class="pill a" style="cursor:pointer" onclick="iRend()">rendimento medio '+pc(wr)+'</span><span class="pill '+(d1>=0?'g':'')+'" style="cursor:pointer" onclick="i1y()">'+(d1>=0?'+':'')+esc(eur(d1))+' netti in 1 anno</span><span class="pill" style="cursor:pointer" onclick="iPosN()">'+P.length+' posizioni</span>'+(intOggi()>0?'<span class="pill g" style="cursor:pointer" onclick="iDay()">\u2248 +'+esc(eur2(intOggi()))+' al giorno</span>':'')+(intTotale()>0?'<span class="pill g" style="cursor:pointer" onclick="iAcc()">interessi accreditati '+esc(eur2(intTotale()))+'</span>':'')+'</div>'+
    growth(P)+'<div class="note" style="margin:0 0 12px">Linea piena: valore netto stimato. Tratteggio: quanto hai versato. Sono ipotesi con i tassi che hai impostato, non garanzie.</div></div>';
+  h+=histCard();
   var up=P.filter(function(p){return p.scad}).sort(function(a,b){return a.scad<b.scad?-1:1}).slice(0,4);
   if(up.length){h+='<div class="sechead"><h2>Prossime scadenze</h2><button class="chip" onclick="go(\'scad\')">Tutte</button></div><div class="card" style="padding:4px 14px">'+up.map(function(p){
     var days=Math.round((new Date(p.scad).getTime()-Date.now())/864e5);var cls=days<0?'x':(days<=30?'s':'');var txt=days<0?'sbloccato':(days===0?'oggi':(days<60?'tra '+days+' giorni':dt(p.scad)));
