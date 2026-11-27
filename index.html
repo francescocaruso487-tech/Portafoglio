@@ -120,7 +120,37 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 .bar{background:#ffffff1a}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.pc,.hero{background:#131c31}.sheet{background:#0e1524}nav{background:#101a2f}}
 @media (prefers-reduced-motion:reduce){button{transition:none}button:active{transform:none}}
+/* ===== v3.7 stile iOS (Liquid Glass) ===== */
+html.ios{color-scheme:light dark;--bg:#f2f2f7;--bg2:#fff;--card:#ffffffb8;--card2:#ffffffd6;--tx:#000;--mu:#6c6c70;--ln:#3c3c4333;--ac:#007aff;--ac2:#007aff;--ok:#34c759;--wa:#ff9500;--er:#ff3b30;--bar:#78788029;--r:22px;--gl:blur(30px) saturate(180%);--fill:#7676801f;--hi:#ffffffcc}
+@media (prefers-color-scheme:dark){html.ios{--bg:#000;--bg2:#1c1c1e;--card:#1c1c1ebd;--card2:#2c2c2ed6;--tx:#fff;--mu:#98989f;--ln:#54545899;--ac:#0a84ff;--ac2:#0a84ff;--ok:#30d158;--wa:#ff9f0a;--er:#ff453a;--bar:#7878805c;--fill:#7676803d;--hi:#ffffff1f}}
+html.ios body{background:var(--bg);background-image:radial-gradient(70% 38% at 0% 0%,#0a84ff26,transparent 70%),radial-gradient(60% 32% at 100% 14%,#bf5af220,transparent 70%),radial-gradient(70% 40% at 50% 100%,#30d15818,transparent 70%);background-attachment:fixed;background-repeat:no-repeat;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;letter-spacing:-.011em}
+html.ios h1{font-size:34px;font-weight:700;letter-spacing:-.03em;margin-top:6px}
+html.ios h2{font-weight:600;letter-spacing:-.02em}
+html.ios .ver{background:var(--fill);border:0;color:var(--mu);font-weight:500}
+html.ios .card,html.ios .pc,html.ios .hero{background:var(--card);border:.5px solid var(--hi);box-shadow:0 1px 0 var(--hi) inset,0 6px 24px #0000001a;border-radius:var(--r)}
+html.ios .hero{border-radius:28px;background:var(--card)}
+html.ios nav{left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 10px);border-radius:34px;background:var(--card);border:.5px solid var(--hi);box-shadow:0 1px 0 var(--hi) inset,0 10px 34px #00000033;padding:5px}
+html.ios nav button{color:var(--mu);border-radius:28px;font-weight:500}
+html.ios nav button.on{color:var(--ac);background:var(--fill);box-shadow:none}
+html.ios button.pri{background:var(--ac);color:#fff;border:0;border-radius:999px;box-shadow:none;text-shadow:none;font-weight:600;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.ios button.sec,html.ios .mini{background:var(--fill);color:var(--ac);border:0;border-radius:999px;box-shadow:none;font-weight:500}
+html.ios button.dan{background:var(--fill);color:var(--er);border:0;border-radius:999px;box-shadow:none}
+html.ios .chip{background:var(--fill);border:0;color:var(--tx)}
+html.ios .chip.on{background:var(--ac);color:#fff;font-weight:600}
+html.ios .pill{background:var(--fill);border:0}
+html.ios .pill.a{background:#007aff1f;color:var(--ac)}
+html.ios .sc .d.s{background:#007aff1f;color:var(--ac)}
+html.ios input,html.ios select,html.ios textarea{background:var(--fill);border:0;border-radius:12px;box-shadow:none;color:var(--tx)}
+html.ios .modal{background:#0000004d}
+html.ios .sheet{background:var(--card2);border:.5px solid var(--hi);border-bottom:0;border-radius:30px 30px 0 0;box-shadow:0 1px 0 var(--hi) inset}
+html.ios .fab{background:var(--ac);color:#fff;border:0;box-shadow:0 10px 26px #007aff66}
+html.ios .bar>i{background:var(--ac)}
+html.ios a{color:var(--ac)}
+html.ios .alert{border-left-width:.5px}
+html.ios .alert.in::before{background:var(--ac)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){html.ios .card,html.ios .pc,html.ios .hero,html.ios nav{background:var(--bg2)}}
 </style>
+<script>try{if(localStorage.getItem('portafoglio_tema')!=='oro')document.documentElement.classList.add('ios')}catch(e){document.documentElement.classList.add('ios')}</script>
 </head>
 <body>
 <header><div class="ver" id="ver"></div><h1>Il mio portafoglio</h1><div class="sub" id="sub"></div></header>
@@ -131,8 +161,9 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.6',APP_DATE='25 nov 2026';
+var APP_VERSION='3.7',APP_DATE='25 nov 2026';
 var CHANGELOG=[
+ ['3.7','Nuovo aspetto in stile iOS (Liquid Glass), chiaro o scuro come il telefono; in Dati si pu\u00f2 tornare al vetro scuro con l\u2019oro'],
  ['3.6','Notifiche: se il telefono cambia iscrizione l\u2019app la riattiva da sola e la comunica a GitHub (con un permesso limitato), senza ricopiare il codice'],
  ['3.5','Le offerte riservate ad altri (minori, eredi, nuovi clienti) non compaiono pi\u00f9 tra le tue; avvisi di cronaca sulle piattaforme che usi; tasso Guber corretto'],
  ['3.4','Notifiche sul telefono, anche ad app chiusa: spese, stipendio e offerte sopra i tuoi tassi. Il catalogo si aggiorna da solo due volte al giorno dalle fonti ufficiali'],
@@ -685,9 +716,12 @@ function openDM(){
   dmRun()
 }
 
+function setTema(v){try{localStorage.setItem('portafoglio_tema',v)}catch(e){}document.documentElement.classList.toggle('ios',v!=='oro');tema();render()}
+function tema(){var m=document.querySelector('meta[name=theme-color]');if(!m)return;var ios=document.documentElement.classList.contains('ios');m.setAttribute('content',ios?(window.matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches?'#000000':'#f2f2f7'):'#070b14')}
 function vDati(){
   var t=S.set.target||{};
-  return '<div class="card"><h2>Obiettivi di allocazione (%)</h2><div class="mu">Facoltativo: serve per il ribilanciamento.</div><div class="two">'+
+  var ios=document.documentElement.classList.contains('ios');
+  return '<div class="card"><h2>Aspetto</h2><div class="mu">Lo stile iOS segue il tema chiaro o scuro del telefono.</div><p><button class="'+(ios?'pri':'sec')+'" onclick="setTema(\'ios\')">Stile iOS</button> <button class="'+(ios?'sec':'pri')+'" onclick="setTema(\'oro\')">Vetro scuro e oro</button></p></div><div class="card"><h2>Obiettivi di allocazione (%)</h2><div class="mu">Facoltativo: serve per il ribilanciamento.</div><div class="two">'+
    CLASSI.map(function(c,i){return '<div><label>'+esc(c)+'</label><input inputmode="decimal" id="tg'+i+'" value="'+esc(t[c]==null?'':t[c])+'"></div>'}).join('')+'</div>'+
    '<div class="two"><div><label>Soglia max per piattaforma (%)</label><input inputmode="decimal" id="sPi" value="'+esc(S.set.maxPiatt)+'"></div><div><label>Soglia max cripto (%)</label><input inputmode="decimal" id="sCr" value="'+esc(S.set.maxCripto)+'"></div></div>'+
    '<label>Segnala soldi fermi solo sopra (€)</label><input inputmode="decimal" id="sId" value="'+esc(S.set.minIdle)+'">'+'<label>Cashback sulla carta Trade Republic (%)</label><input inputmode="decimal" id="sCb" value="'+esc(S.set.cashback)+'">'+
@@ -1172,7 +1206,7 @@ function copyPrompt(){
   try{navigator.clipboard.writeText(t).then(function(){msg.textContent='Riepilogo copiato. Incollalo in una chat con Claude.'},function(){msg.textContent='Copia non riuscita.'})}catch(e){msg.textContent='Copia non riuscita.'}
 }
 
-load();runInt();runFisse();runPac();render();refreshPrezzi();loadOff(function(){if(tab==='cons')render()});try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();apriHash(location.hash);
+load();runInt();runFisse();runPac();render();refreshPrezzi();tema();loadOff(function(){if(tab==='cons')render()});try{history.replaceState({tab:tab},'')}catch(e){}importFromHash();apriHash(location.hash);
 window.addEventListener('hashchange',function(){apriHash(location.hash)});
 document.addEventListener('visibilitychange',function(){if(!document.hidden){loadOff(function(){var md=document.getElementById('modal');if(tab==='cons'&&md.hidden)render()});pushControlla();runInt();runFisse();if(runPac())render();else render();refreshPrezzi()}});
 try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
