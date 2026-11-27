@@ -121,8 +121,8 @@ input,select,textarea{background:#ffffff10;border:1px solid #ffffff22;border-rad
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.pc,.hero{background:#131c31}.sheet{background:#0e1524}nav{background:#101a2f}}
 @media (prefers-reduced-motion:reduce){button{transition:none}button:active{transform:none}}
 /* ===== v3.7 stile iOS (Liquid Glass) ===== */
-html.ios{color-scheme:light dark;--bg:#f2f2f7;--bg2:#fff;--card:#ffffffb8;--card2:#ffffffd6;--tx:#000;--mu:#6c6c70;--ln:#3c3c4333;--ac:#007aff;--ac2:#007aff;--ok:#34c759;--wa:#ff9500;--er:#ff3b30;--bar:#78788029;--r:22px;--gl:blur(30px) saturate(180%);--fill:#7676801f;--hi:#ffffffcc}
-@media (prefers-color-scheme:dark){html.ios{--bg:#000;--bg2:#1c1c1e;--card:#1c1c1ebd;--card2:#2c2c2ed6;--tx:#fff;--mu:#98989f;--ln:#54545899;--ac:#0a84ff;--ac2:#0a84ff;--ok:#30d158;--wa:#ff9f0a;--er:#ff453a;--bar:#7878805c;--fill:#7676803d;--hi:#ffffff1f}}
+html.ios{color-scheme:light dark;--bg:#f2f2f7;--bg2:#fff;--card:#ffffffb8;--card2:#ffffffd6;--tx:#000;--mu:#6c6c70;--ln:#3c3c4333;--ac:#0062cc;--ac2:#0062cc;--acb:#0062cc;--ok:#1e7a35;--wa:#a84b00;--er:#d70015;--bar:#78788029;--r:22px;--gl:blur(30px) saturate(180%);--fill:#7676801f;--hi:#ffffffcc}
+@media (prefers-color-scheme:dark){html.ios{--bg:#000;--bg2:#1c1c1e;--card:#1c1c1ebd;--card2:#2c2c2ed6;--tx:#fff;--mu:#98989f;--ln:#54545899;--ac:#0a84ff;--ac2:#0a84ff;--acb:#0a6ed1;--ok:#30d158;--wa:#ff9f0a;--er:#ff453a;--bar:#7878805c;--fill:#7676803d;--hi:#ffffff1f}}
 html.ios body{background:var(--bg);background-image:radial-gradient(70% 38% at 0% 0%,#0a84ff26,transparent 70%),radial-gradient(60% 32% at 100% 14%,#bf5af220,transparent 70%),radial-gradient(70% 40% at 50% 100%,#30d15818,transparent 70%);background-attachment:fixed;background-repeat:no-repeat;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;letter-spacing:-.011em}
 html.ios h1{font-size:34px;font-weight:700;letter-spacing:-.03em;margin-top:6px}
 html.ios h2{font-weight:600;letter-spacing:-.02em}
@@ -132,7 +132,7 @@ html.ios .hero{border-radius:28px;background:var(--card)}
 html.ios nav{left:14px;right:14px;bottom:calc(env(safe-area-inset-bottom) + 10px);border-radius:34px;background:var(--card);border:.5px solid var(--hi);box-shadow:0 1px 0 var(--hi) inset,0 10px 34px #00000033;padding:5px}
 html.ios nav button{color:var(--mu);border-radius:28px;font-weight:500}
 html.ios nav button.on{color:var(--ac);background:var(--fill);box-shadow:none}
-html.ios button.pri{background:var(--ac);color:#fff;border:0;border-radius:999px;box-shadow:none;text-shadow:none;font-weight:600;-webkit-backdrop-filter:none;backdrop-filter:none}
+html.ios button.pri{background:var(--acb);color:#fff;border:0;border-radius:999px;box-shadow:none;text-shadow:none;font-weight:600;-webkit-backdrop-filter:none;backdrop-filter:none}
 html.ios button.sec,html.ios .mini{background:var(--fill);color:var(--ac);border:0;border-radius:999px;box-shadow:none;font-weight:500}
 html.ios button.dan{background:var(--fill);color:var(--er);border:0;border-radius:999px;box-shadow:none}
 html.ios .chip{background:var(--fill);border:0;color:var(--tx)}
@@ -162,8 +162,9 @@ html.ios .alert.in::before{background:var(--ac)}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.7.1',APP_DATE='27 nov 2026';
+var APP_VERSION='3.7.2',APP_DATE='27 nov 2026';
 var CHANGELOG=[
+ ['3.7.2','Tema iOS pi\u00f9 leggibile: colori di testo e bottoni con contrasto adeguato (verde, arancio, rosso, blu e testo sui bottoni)'],
  ['3.7.1','Corretto: i nomi molto lunghi senza spazi non allargano pi\u00f9 la pagina in Scadenze e Dati'],
  ['3.7','Nuovo aspetto in stile iOS (Liquid Glass), chiaro o scuro come il telefono; in Dati si pu\u00f2 tornare al vetro scuro con l\u2019oro'],
  ['3.6','Notifiche: se il telefono cambia iscrizione l\u2019app la riattiva da sola e la comunica a GitHub (con un permesso limitato), senza ricopiare il codice'],
