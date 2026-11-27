@@ -28,32 +28,11 @@
  },
  "visti": {},
  "annunci": {},
- "controlli": [
-  {
-   "data": "2026-11-26",
-   "chiave": "sent:confronto-finanza:4",
-   "titolo": "Confronto Finanza.com: compare un tasso piu' alto (4%)",
-   "url": "https://www.finanza.com/focus/conti/conto-deposito-migliore-confronto"
-  },
-  {
-   "data": "2026-11-26",
-   "chiave": "sent:confronto-pmi:4",
-   "titolo": "Classifiche PMI.it: compare un tasso piu' alto (4%)",
-   "url": "https://www.pmi.it/card/i-migliori-conti-deposito-del-2026-vincolati-liberi-e-senza-conto-corrente"
-  }
- ],
+ "controlli": [],
  "sentinelle": {
-  "guber-social": {
-   "firma": "0,20% 0,40%",
-   "data": "2026-11-25"
-  },
   "confronto-finanzadigitale": {
    "firma": "4",
    "data": "2026-11-25"
-  },
-  "revolut": {
-   "firma": "2,5% 2,75% 3,5% 3,50%",
-   "data": "2026-11-26"
   },
   "confronto-finanza": {
    "firma": "4",
