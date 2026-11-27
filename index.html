@@ -163,8 +163,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.8',APP_DATE='27 nov 2026';
+var APP_VERSION='3.8.1',APP_DATE='27 nov 2026';
 var CHANGELOG=[
+ ['3.8.1','Le card su cui si tocca (avvisi, scadenze, riepiloghi) ora si usano anche con la tastiera e sono riconosciute dagli screen reader'],
  ['3.8','Nuovo: Stress test in Consigli. Scegli uno scenario (crisi azionaria, inverno cripto, tassi +2%, tempesta perfetta) o regola gli shock a mano e vedi quanto perde il patrimonio e dove'],
  ['3.7.2','Tema iOS pi\u00f9 leggibile: colori di testo e bottoni con contrasto adeguato (verde, arancio, rosso, blu e testo sui bottoni)'],
  ['3.7.1','Corretto: i nomi molto lunghi senza spazi non allargano pi\u00f9 la pagina in Scadenze e Dati'],
@@ -781,10 +782,12 @@ function render(){
   var ic={quadro:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',pos:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',spese:'<path d="M3 7a2 2 0 0 1 2-2h13v3"/><path d="M3 7v11a2 2 0 0 0 2 2h14a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-2z"/><circle cx="16.5" cy="14" r="1"/>',scad:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',cons:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/>',dati:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/>'};
   var names=[['quadro','Quadro'],['pos','Posizioni'],['spese','Spese'],['scad','Scadenze'],['cons','Consigli'],['dati','Dati']];
   document.getElementById('nav').innerHTML=names.map(function(n){return '<button class="'+(n[0]===tab?'on':'')+'" onclick="go(\''+n[0]+'\')"><svg viewBox="0 0 24 24" aria-hidden="true">'+ic[n[0]]+'</svg><span>'+n[1]+'</span></button>'}).join('');
+  document.querySelectorAll('#main [onclick]').forEach(function(e){if(!/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(e.tagName)&&!e.hasAttribute('tabindex')){e.tabIndex=0;e.setAttribute('role','button')}});
   animGrowth=false;
   var fb=document.getElementById('fab');if(fb)fb.remove();
   if(tab==='pos'||(tab==='quadro'&&S.pos.length))addFab('+ Aggiungi',function(){openForm()});else if(tab==='spese')addFab('+ Spesa',function(){fSpesa()});
 }
+document.addEventListener('keydown',function(e){var t=e.target;if((e.key==='Enter'||e.key===' ')&&t&&t.getAttribute&&t.getAttribute('role')==='button'&&!/^(BUTTON|A|INPUT)$/.test(t.tagName)){e.preventDefault();t.click()}});
 function addFab(lab,fn){var b=document.createElement('button');b.id='fab';b.className='pri fab';b.textContent=lab;b.onclick=fn;document.body.appendChild(b)}
 function hpush(s){try{history.pushState(s,'')}catch(e){}}
 function openModal(m){if(m.hidden)hpush({m:1,tab:tab});m.hidden=false}
