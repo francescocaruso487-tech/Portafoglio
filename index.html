@@ -163,8 +163,9 @@ input[type=range]{width:100%;accent-color:var(--ac)}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.8.1',APP_DATE='27 nov 2026';
+var APP_VERSION='3.9',APP_DATE='27 nov 2026';
 var CHANGELOG=[
+ ['3.9','Nuovo: "E se sposto dei soldi?" in Consigli. Simuli uno spostamento tra due posizioni e vedi interessi netti, ripartizione e peso delle piattaforme prima e dopo'],
  ['3.8.1','Le card su cui si tocca (avvisi, scadenze, riepiloghi) ora si usano anche con la tastiera e sono riconosciute dagli screen reader'],
  ['3.8','Nuovo: Stress test in Consigli. Scegli uno scenario (crisi azionaria, inverno cripto, tassi +2%, tempesta perfetta) o regola gli shock a mano e vedi quanto perde il patrimonio e dove'],
  ['3.7.2','Tema iOS pi\u00f9 leggibile: colori di testo e bottoni con contrasto adeguato (verde, arancio, rosso, blu e testo sui bottoni)'],
@@ -527,10 +528,38 @@ function openStress(again){
   var ch='<div class="chips" id="stChips" style="flex-wrap:wrap;margin:8px 0">'+STS.map(function(s){return '<button class="chip'+(s.id===STID?' on':'')+'" onclick="stSel(\''+s.id+'\')">'+esc(s.n)+'</button>'}).join('')+'</div>';
   var sl=STG.map(function(k,i){return '<label style="display:block;margin:6px 0"><span style="display:flex;justify-content:space-between"><span>'+esc(k)+'</span><b id="stv_'+i+'">'+(STV[k]>0?'+':'')+STV[k]+'%</b></span><input type="range" min="-90" max="30" step="5" value="'+STV[k]+'" aria-label="Variazione '+esc(k)+'" oninput="stSet(\''+k+'\',this.value)"></label>'}).join('');
   sheetOpen('Stress test','<div class="mu">Cosa succede al tuo patrimonio se i mercati cadono di colpo. Scegli uno scenario o regola le variazioni a mano.</div>'+ch+sl+'<div id="stRes">'+stRes()+'</div><div class="note">È una simulazione con ipotesi tue, non una previsione. I titoli di Stato tenuti fino a scadenza non perdono davvero capitale: qui sono trattati come stabili.</div>')}
+var WI={a:'',b:'',x:1000};
+function wiName(p){return esc(p.nome)+' · '+esc(p.piatt)+' · '+eur(num(p.cap))}
+function wiRes(){
+  var P=S.pos,A=P.filter(function(p){return p.id===WI.a})[0],B=P.filter(function(p){return p.id===WI.b})[0];
+  if(!A||!B||A===B)return '<div class="mu">Scegli due posizioni diverse.</div>';
+  var x=Math.max(0,Math.min(num(WI.x),num(A.cap)));
+  var tot=sum(P,function(p){return num(p.cap)});if(!tot)return '';
+  function snap(m){var cl={},pl={},inc=0;P.forEach(function(p){var c=num(p.cap)+(m?(p===A?-x:p===B?x:0):0);var k=(TIPI[p.tipo]||TIPI.fermi).cl;cl[k]=(cl[k]||0)+c;pl[p.piatt]=(pl[p.piatt]||0)+c;inc+=c*posNet(p)/100});return {cl:cl,pl:pl,inc:inc}}
+  var a=snap(false),b=snap(true),tg=S.set.target||{},h='';
+  h+='<div class="card" style="margin:10px 0"><div class="mu">Interessi netti stimati in un anno</div><div style="font-size:24px;font-weight:700">'+esc(eur(b.inc))+'</div><div class="'+(b.inc-a.inc<0?'neg':'posv')+'">'+esc((b.inc-a.inc<0?'−':'+')+eur(Math.abs(b.inc-a.inc))+' rispetto a ora ('+eur(a.inc)+')')+'</div></div>';
+  h+='<div class="mu" style="margin:8px 0 4px">Come cambia la ripartizione</div>';
+  CLASSI.forEach(function(k){var p0=(a.cl[k]||0)/tot*100,p1=(b.cl[k]||0)/tot*100;if(!p0&&!p1)return;var t=tg[k];var ts=(t!==''&&t!=null&&num(t)>0)?' <span class="mu">(obiettivo '+pc(num(t))+')</span>':'';h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0"><span>'+esc(k)+ts+'</span><b>'+esc(pc(p0))+' → '+esc(pc(p1))+'</b></div>'});
+  var mx=function(o){var m=0,n='';Object.keys(o).forEach(function(k){if(o[k]>m){m=o[k];n=k}});return [n,m/tot*100]};
+  var m0=mx(a.pl),m1=mx(b.pl),lim=num(S.set.maxPiatt);
+  h+='<div class="mu" style="margin:10px 0 4px">Piattaforma più grande</div><div>'+esc(m0[0])+' '+esc(pc(m0[1]))+' → <b class="'+(lim&&m1[1]>lim?'neg':'')+'">'+esc(m1[0])+' '+esc(pc(m1[1]))+'</b>'+(lim&&m1[1]>lim?' <span class="neg">sopra la tua soglia ('+lim+'%)</span>':'')+'</div>';
+  return h}
+function wiUpd(){var e=document.getElementById('wiRes');if(e)e.innerHTML=wiRes()}
+function wiSet(k,v){WI[k]=v;wiUpd()}
+function openWhatIf(){
+  var P=S.pos;if(P.length<2){sheetOpen('E se sposto dei soldi?','<div class="mu">Servono almeno due posizioni.</div>');return}
+  if(!P.some(function(p){return p.id===WI.a}))WI.a=P[0].id;if(!P.some(function(p){return p.id===WI.b})||WI.b===WI.a)WI.b=P.filter(function(p){return p.id!==WI.a})[0].id;
+  var opt=function(sel){return P.map(function(p){return '<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+wiName(p)+'</option>'}).join('')};
+  sheetOpen('E se sposto dei soldi?','<div class="mu">Simula uno spostamento senza cambiare niente: vedi interessi, ripartizione e peso delle piattaforme prima e dopo.</div>'+
+   '<label style="display:block;margin:8px 0">Da<select id="wiA" onchange="wiSet(\'a\',this.value)">'+opt(WI.a)+'</select></label>'+
+   '<label style="display:block;margin:8px 0">A<select id="wiB" onchange="wiSet(\'b\',this.value)">'+opt(WI.b)+'</select></label>'+
+   '<label style="display:block;margin:8px 0">Importo (€)<input id="wiX" type="number" inputmode="decimal" min="0" value="'+esc(WI.x)+'" oninput="wiSet(\'x\',this.value)"></label>'+
+   '<div id="wiRes">'+wiRes()+'</div><div class="note">Stima con i tassi che hai inserito, al netto delle tasse. Non tiene conto di vincoli, penali o costi.</div>')}
 function vCons(){
   var dmc='<div class="card"><h2>Dove li metto?</h2><div class="mu">Hai ricevuto dei soldi o vuoi spostarli? Scegli importo, durata e rischio: ti mostro le offerte che rendono di pi\u00f9 al netto di tasse e bollo, anche di altre banche.</div><p><button class="pri" onclick="openDM()">Apri</button></p></div>';
   var stc='<div class="card"><h2>Stress test</h2><div class="mu">E se le borse crollano o le cripto perdono il 70%? Vedi quanto perde il tuo patrimonio e dove fa pi\u00f9 male.</div><p><button class="pri" onclick="openStress()">Apri</button></p></div>';
-  var h=avvisiCard()+dmc+(S.pos.length?stc:'')+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
+  var wic='<div class="card"><h2>E se sposto dei soldi?</h2><div class="mu">Prova uno spostamento tra due posizioni e guarda come cambiano interessi, ripartizione e peso delle piattaforme.</div><p><button class="pri" onclick="openWhatIf()">Apri</button></p></div>';
+  var h=avvisiCard()+dmc+(S.pos.length?stc+(S.pos.length>1?wic:''):'')+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
   if(!S.pos.length)return dmc+ctlCard()+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
