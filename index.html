@@ -150,6 +150,7 @@ html.ios .alert{border-left-width:.5px}
 html.ios .alert.in::before{background:var(--ac)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){html.ios .card,html.ios .pc,html.ios .hero,html.ios nav{background:var(--bg2)}}
 #main{overflow-wrap:anywhere}
+input[type=range]{width:100%;accent-color:var(--ac)}
 </style>
 <script>try{if(localStorage.getItem('portafoglio_tema')!=='oro')document.documentElement.classList.add('ios')}catch(e){document.documentElement.classList.add('ios')}</script>
 </head>
@@ -162,8 +163,9 @@ html.ios .alert.in::before{background:var(--ac)}
 <script>
 /* ===== dati e calcoli ===== */
 var KEY='portafoglio_v1';
-var APP_VERSION='3.7.2',APP_DATE='27 nov 2026';
+var APP_VERSION='3.8',APP_DATE='27 nov 2026';
 var CHANGELOG=[
+ ['3.8','Nuovo: Stress test in Consigli. Scegli uno scenario (crisi azionaria, inverno cripto, tassi +2%, tempesta perfetta) o regola gli shock a mano e vedi quanto perde il patrimonio e dove'],
  ['3.7.2','Tema iOS pi\u00f9 leggibile: colori di testo e bottoni con contrasto adeguato (verde, arancio, rosso, blu e testo sui bottoni)'],
  ['3.7.1','Corretto: i nomi molto lunghi senza spazi non allargano pi\u00f9 la pagina in Scadenze e Dati'],
  ['3.7','Nuovo aspetto in stile iOS (Liquid Glass), chiaro o scuro come il telefono; in Dati si pu\u00f2 tornare al vetro scuro con l\u2019oro'],
@@ -497,9 +499,37 @@ function offAlerts(){
   lp.forEach(function(x){var cap=num(x.p.cap),bo=null;OFF.offerte.forEach(function(o){if(o.non_per_me||o.rischio>2||o.mesi>12||cap<(o.min||0))return;if(o.promoFine&&monthsTo(o.promoFine)<=0)return;var c=offCalc(o,cap,12);var up=c.port*(c.nr-x.n)/100;if(up>=20&&(!bo||up>bo.up))bo={o:o,up:up,port:c.port}});
     if(bo)A.push({t:'Offerta migliore per '+x.p.nome,x:bo.o.nome+' ('+bo.o.emittente+') rende circa '+eur(bo.up)+' netti all\u2019anno in pi\u00f9 su '+eur(bo.port)+(bo.o.mesi?', con vincolo di '+bo.o.mesi+' mesi':', senza vincolo')+(bo.o.promoFine?'. Promo fino al '+new Date(bo.o.promoFine+'T12:00:00').toLocaleDateString('it-IT'):'')+(bo.o.ok?'':' (dato da verificare)')+'.',up:bo.up})});
   A.sort(function(a,b){return b.up-a.up});return A.slice(0,3)}
+var STG=['Azionario','Cripto','Obbligazioni','Sicuri','Liquidità ferma'];
+var STS=[
+ {id:'az',n:'Crisi azionaria',v:{'Azionario':-35,'Cripto':-50,'Obbligazioni':-3,'Sicuri':0,'Liquidità ferma':0}},
+ {id:'cr',n:'Inverno cripto',v:{'Azionario':-10,'Cripto':-70,'Obbligazioni':0,'Sicuri':0,'Liquidità ferma':0}},
+ {id:'ta',n:'Tassi +2%',v:{'Azionario':-8,'Cripto':-15,'Obbligazioni':-9,'Sicuri':0,'Liquidità ferma':0}},
+ {id:'te',n:'Tempesta perfetta',v:{'Azionario':-40,'Cripto':-75,'Obbligazioni':-10,'Sicuri':0,'Liquidità ferma':0}}
+];
+var STID='az',STV=null;
+function stGrp(p){return p.tipo==='obbl'?'Obbligazioni':(TIPI[p.tipo]||TIPI.fermi).cl}
+function stRes(){
+  var v=STV,g={},pl={},tot=0,dopo=0;
+  S.pos.forEach(function(p){var c=num(p.cap),k=stGrp(p),a=c*(1+num(v[k])/100);g[k]=g[k]||[0,0];g[k][0]+=c;g[k][1]+=a;pl[p.piatt]=pl[p.piatt]||[0,0];pl[p.piatt][0]+=c;pl[p.piatt][1]+=a;tot+=c;dopo+=a});
+  if(!tot)return '<div class="mu">Nessun patrimonio da simulare.</div>';
+  var d=dopo-tot,h='<div class="card" style="margin:10px 0"><div class="mu">Patrimonio dopo lo shock</div><div style="font-size:26px;font-weight:700">'+esc(eur(dopo))+'</div><div class="'+(d<0?'neg':'posv')+'">'+esc((d<0?'−':'+')+eur(Math.abs(d))+' ('+pc(d/tot*100)+')')+' su '+esc(eur(tot))+'</div></div>';
+  h+='<div class="mu" style="margin:8px 0 4px">Per tipo di investimento</div>';
+  STG.forEach(function(k){if(!g[k])return;var x=g[k],dd=x[1]-x[0];h+='<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0"><span>'+esc(k)+' <span class="mu">'+esc(eur(x[0]))+'</span></span><b class="'+(dd<0?'neg':'')+'">'+esc(eur(x[1]))+'</b></div>'});
+  var P=Object.keys(pl).map(function(k){return [k,pl[k][1]-pl[k][0]]}).filter(function(x){return x[1]<-0.5}).sort(function(a,b){return a[1]-b[1]}).slice(0,3);
+  if(P.length){h+='<div class="mu" style="margin:10px 0 4px">Dove fa più male</div>'+P.map(function(x){return '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0"><span>'+esc(x[0])+'</span><b class="neg">−'+esc(eur(-x[1]))+'</b></div>'}).join('')}
+  return h}
+function stUpd(){var e=document.getElementById('stRes');if(e)e.innerHTML=stRes()}
+function stSet(k,val){STV[k]=num(val);STID='';var l=document.getElementById('stv_'+STG.indexOf(k));if(l)l.textContent=(STV[k]>0?'+':'')+STV[k]+'%';stUpd();document.querySelectorAll('#stChips .chip').forEach(function(c){c.classList.remove('on')})}
+function stSel(id){STID=id;STS.forEach(function(s){if(s.id===id)STV=JSON.parse(JSON.stringify(s.v))});openStress(true)}
+function openStress(again){
+  if(!STV)STS.forEach(function(s){if(s.id===STID)STV=JSON.parse(JSON.stringify(s.v))});
+  var ch='<div class="chips" id="stChips" style="flex-wrap:wrap;margin:8px 0">'+STS.map(function(s){return '<button class="chip'+(s.id===STID?' on':'')+'" onclick="stSel(\''+s.id+'\')">'+esc(s.n)+'</button>'}).join('')+'</div>';
+  var sl=STG.map(function(k,i){return '<label style="display:block;margin:6px 0"><span style="display:flex;justify-content:space-between"><span>'+esc(k)+'</span><b id="stv_'+i+'">'+(STV[k]>0?'+':'')+STV[k]+'%</b></span><input type="range" min="-90" max="30" step="5" value="'+STV[k]+'" aria-label="Variazione '+esc(k)+'" oninput="stSet(\''+k+'\',this.value)"></label>'}).join('');
+  sheetOpen('Stress test','<div class="mu">Cosa succede al tuo patrimonio se i mercati cadono di colpo. Scegli uno scenario o regola le variazioni a mano.</div>'+ch+sl+'<div id="stRes">'+stRes()+'</div><div class="note">È una simulazione con ipotesi tue, non una previsione. I titoli di Stato tenuti fino a scadenza non perdono davvero capitale: qui sono trattati come stabili.</div>')}
 function vCons(){
   var dmc='<div class="card"><h2>Dove li metto?</h2><div class="mu">Hai ricevuto dei soldi o vuoi spostarli? Scegli importo, durata e rischio: ti mostro le offerte che rendono di pi\u00f9 al netto di tasse e bollo, anche di altre banche.</div><p><button class="pri" onclick="openDM()">Apri</button></p></div>';
-  var h=avvisiCard()+dmc+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
+  var stc='<div class="card"><h2>Stress test</h2><div class="mu">E se le borse crollano o le cripto perdono il 70%? Vedi quanto perde il tuo patrimonio e dove fa pi\u00f9 male.</div><p><button class="pri" onclick="openStress()">Apri</button></p></div>';
+  var h=avvisiCard()+dmc+(S.pos.length?stc:'')+ctlCard()+offAlerts().map(function(a){return '<div class="card alert" style="cursor:pointer" onclick="openDM()"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per vedere le alternative</div></div>'}).join('')+consigli().map(function(a,i){return '<div class="card alert '+a.c+'" style="cursor:pointer" onclick="iCons('+i+')"><b>'+esc(a.t)+'</b>'+esc(a.x)+'<div class="mu" style="font-size:12px;margin-top:6px">Tocca per i dettagli</div></div>'}).join('');
   if(!S.pos.length)return dmc+ctlCard()+'<div class="card empty">Aggiungi prima qualche posizione.</div>';
   h+='<div class="card"><h2>Analisi con Claude</h2><div class="mu">Copia un riepilogo del tuo portafoglio e incollalo in una chat con Claude: potrà ragionare con i dati e cercare sul web le novità di oggi. Nell\'app non è collegato nulla: il riepilogo lo porti tu.</div><p><button class="pri" onclick="copyPrompt()">Copia riepilogo per Claude</button></p><div class="note" id="aiMsg"></div></div>';
   return h;
