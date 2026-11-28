@@ -38,7 +38,7 @@
 {"id":"progetto-conto","tasso":4,"req":"3% fino al 30 novembre 2026, poi 4% fino al 30 giugno 2027. Banca uscita dall'amministrazione straordinaria ad aprile 2026 (Banca d'Italia)","nome":"Conto Progetto libero (3% poi 4%)","emittente":"Banca Progetto","cat":"libero","tassa":26,"mesi":0,"min":0,"max":0,"rischio":1,"garanzia":"FITD fino a 100.000 €","bollo":true,"promoFine":"2027-06-30","fonte":"https://www.bancaprogetto.it/it","ok":true,"verificato":"2026-11-28"}
  ],
  "controllo": {
-  "quando": "2026-11-28T00:47:42.798Z",
+  "quando": "2026-11-28T14:37:37.174Z",
   "lette": 30,
   "totali": 30,
   "nonLette": []
